@@ -109,14 +109,28 @@ class VmShell(Cmd):
   
   def do_pool(self, input):
     if input == 'plan':
-     vms.pool_plan()
-  
+      vms.pool_plan()
+    if input == 'apply':
+      vms.pool_apply()
+    if input == 'destroy':
+      vms.pool_destroy()
+    if input == 'list':
+      _res = vms.pool_list()
+      print(f'Selected: {_res.get("selected")}')
+      
+      for item in _res.get('pools'):
+        print (f'Pool: {item}')
+      
+        
   def do_show(self, input):
     items = list(vms.pool_show())
     
     if input == 'yaml':
       print(yaml.dump(items))
     else:
+      print(f'Pool id: {vms.pool_id}')
+      print(f'owner: {vms.pool.owner}')
+      print(f'State: {vms.pool.state}')
       print(f'{TITLE_NUMBER:>3}| {TITLE_ID:38}| {TITLE_NAME:8}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
       print('-'*74)
       for idx, item in enumerate(items):

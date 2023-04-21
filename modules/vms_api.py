@@ -1,4 +1,5 @@
 from uuid import uuid4, UUID
+from collections.abc import Iterable
 import logging
 import requests
 from . import pool
@@ -32,6 +33,12 @@ class VMS():
     return self.pool_id
     
   
+  def pool_list(self):
+    response = self.http.get(f'{self.vms_api}/pool/all')
+    _res = response.json()
+    return _res.get('data')
+    
+    
   def pool_connect(self, pool_id: UUID):
     self.pool_id = pool_id
     self.logger.debug(f'Connect to pool {pool_id}')
@@ -77,7 +84,7 @@ class VMS():
   def pool_show(self):
     self.logger.debug(f'Show pool {self.pool_id}')
     
-    if len(self.pool.items) > 0:
+    if isinstance(self.pool.items, Iterable):
       
       for item in self.pool.items:
         yield {
@@ -134,13 +141,11 @@ class VMS():
       print(self.pool.json())
     else:
       _res = response.json()
-      self.pool = _res.get('data')
+      self.pool = pool.TVMPool(**_res.get('data'))
       
   
   def pool_plan(self):
-    
-    response = self.http.put(f'{self.vms_api}/pool', data=self.pool.json())
-    response = self.http.post(f'{self.vms_api}/pool/plan')
+    response = self.http.post(f'{self.vms_api}/pool/plan', data=self.pool.json())
     
     if(response.status_code >= 400):
       print('Error')
@@ -148,7 +153,7 @@ class VMS():
       print(self.pool.json())
     else:
       _res = response.json()
-      self.pool = _res.get('data')
+      self.pool = pool.TVMPool(**_res.get('data'))
       
       
   def pool_destroy(self):
@@ -160,4 +165,4 @@ class VMS():
       print(self.pool.json())
     else:
       _res = response.json()
-      self.pool = _res.get('data')
+      self.pool = pool.TVMPool(**_res.get('data'))

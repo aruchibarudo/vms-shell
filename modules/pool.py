@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel
 from uuid import uuid4, UUID
 
@@ -22,6 +22,8 @@ class TVMTypes(str, MyEnum):
   
 
 class TVMOs(str, MyEnum):
+  redos73 = 'redos73'
+  astra17orel = 'astra17orel'
   redos7 = 'redos7'
   astra17 = 'astra17'
 
@@ -62,5 +64,10 @@ class TVM(BaseModel):
 class TVMPool(BaseModel):
   id: UUID = None
   vm_name_prefix: str = 'spb41tp9223-'
-  items: List[TVM] = []
+  state: str = None
+  site: str = "SPB41"
+  api_version: str = 'v1'
+  items: Union[List[TVM], list] = list()
   owner: str
+  description: str = None
+  name: str = None
