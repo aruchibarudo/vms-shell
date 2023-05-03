@@ -95,7 +95,7 @@ class VmShell(Cmd):
     print('add small redos 2 - add 2 VM instance type small with os RedOS')
     
 
-  def complete_add(self, text, line, begidx, endidx) -> list[str]:
+  def complete_add(self, text, line, begidx, endidx) -> list:
     return [i for i in ('small', 'medium', 'large') if i.startswith(text)]
   
   
