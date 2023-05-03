@@ -5,6 +5,15 @@ import requests
 from . import pool
 import json
 
+def http_exception(func):
+  def wrapper(*args, **kwargs):
+    try:
+      return func(*args, **kwargs)
+    except requests.exceptions.RequestException as exc:
+      logging.error(str(exc))
+    
+  return wrapper
+
 
 class VMS():
 
@@ -12,12 +21,14 @@ class VMS():
     self.logger = logger or logging.getLogger(__name__)
     self.pool_id = pool_id
     self.username = username
+    self.http_timeout = 3
     self.http = requests.Session()
     self.http.headers['Content-type'] = 'application/json'
     self.vms_api = vms_api
     self.pool = pool.TVMPool(owner=username)
 
   
+  @http_exception
   def pool_create(self):
     params = {
       'owner': self.username
@@ -33,16 +44,18 @@ class VMS():
     return self.pool_id
     
   
+  @http_exception
   def pool_list(self):
-    response = self.http.get(f'{self.vms_api}/pool/all')
+    response = self.http.get(f'{self.vms_api}/pool/all', timeout=self.http_timeout)
     _res = response.json()
     return _res.get('data')
     
-    
+
+  @http_exception    
   def pool_connect(self, pool_id: UUID):
     self.pool_id = pool_id
     self.logger.debug(f'Connect to pool {pool_id}')
-    response = self.http.get(f'{self.vms_api}/pool/{pool_id}')
+    response = self.http.get(f'{self.vms_api}/pool/{pool_id}', timeout=self.http_timeout)
     _res = response.json()
     
     if _res.get('status') == 'OK':
@@ -54,9 +67,10 @@ class VMS():
     return _res.get('status') == 'OK'
     
     
+  @http_exception
   def pool_get(self):
     self.logger.debug(f'Show pool {self.pool_id}')
-    response = self.http.get(f'{self.vms_api}/pool')
+    response = self.http.get(f'{self.vms_api}/pool', timeout=self.http_timeout)
     _res = response.json()
     
     if(_res.get('status') == 'OK'):
@@ -132,8 +146,9 @@ class VMS():
     self.pool.items = _vm
     
 
+  @http_exception
   def pool_apply(self):
-    response = self.http.post(f'{self.vms_api}/pool/apply', data=self.pool.json())
+    response = self.http.post(f'{self.vms_api}/pool/apply', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
       print('Error')
@@ -144,8 +159,9 @@ class VMS():
       self.pool = pool.TVMPool(**_res.get('data'))
       
   
+  @http_exception
   def pool_plan(self):
-    response = self.http.post(f'{self.vms_api}/pool/plan', data=self.pool.json())
+    response = self.http.post(f'{self.vms_api}/pool/plan', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
       print('Error')
@@ -156,8 +172,9 @@ class VMS():
       self.pool = pool.TVMPool(**_res.get('data'))
       
       
+  @http_exception
   def pool_destroy(self):
-    response = self.http.post(f'{self.vms_api}/pool/destroy', data=self.pool.json())
+    response = self.http.post(f'{self.vms_api}/pool/destroy', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
       print('Error')

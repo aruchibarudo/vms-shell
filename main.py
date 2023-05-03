@@ -116,10 +116,12 @@ class VmShell(Cmd):
       vms.pool_destroy()
     if input == 'list':
       _res = vms.pool_list()
-      print(f'Selected: {_res.get("selected")}')
       
-      for item in _res.get('pools'):
-        print (f'Pool: {item}')
+      if _res:
+        print(f'Selected: {_res.get("selected")}')
+        
+        for item in _res.get('pools'):
+          print (f'Pool: {item}')
       
         
   def do_show(self, input):
