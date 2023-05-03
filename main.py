@@ -1,3 +1,5 @@
+#!env python3
+
 import logging
 from cmd import Cmd
 import yaml
