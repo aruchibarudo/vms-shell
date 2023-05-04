@@ -11,8 +11,8 @@ class MyEnum(Enum):
     return value in cls._value2member_map_
 
   @classmethod
-  def list(cls) -> list:
-    return [i.value for i in cls]
+  def list(cls) -> tuple:
+    return tuple([i.value for i in cls])
   
 
 class TVMTypes(str, MyEnum):

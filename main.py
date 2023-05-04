@@ -89,7 +89,7 @@ class VmShell(Cmd):
     
 
   def complete_add(self, text, line, begidx, endidx) -> list:
-    return [i for i in ('small', 'medium', 'large') if i.startswith(text)]
+    return [i for i in pool.TVMTypes.list() if i.startswith(text)]
   
   
   def do_rm(self, input):
