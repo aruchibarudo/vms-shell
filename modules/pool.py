@@ -24,8 +24,6 @@ class TVMTypes(str, MyEnum):
 class TVMOs(str, MyEnum):
   redos73 = 'redos73'
   astra17orel = 'astra17orel'
-  redos7 = 'redos7'
-  astra17 = 'astra17'
 
 
 class TVMConfig(BaseModel):

@@ -1,4 +1,4 @@
-#!env python3
+#!/usr/bin/env python3
 
 import logging
 from cmd import Cmd
@@ -32,6 +32,14 @@ TITLE_DISK = 'Disk'
 class VmShell(Cmd):
   prompt = 'vms> '
   err = []
+  pool_cmds = (
+    'create',
+    'connect',
+    'plan',
+    'apply',
+    'list',
+    'destroy'
+  )
 
   def show_error(self, msg: str=None) -> bool:
     
@@ -51,24 +59,7 @@ class VmShell(Cmd):
   def do_hello(self, input):
     print(f'Hello "{input}"')
   
-
-  def do_connect(self, input):
-    res = vms.pool_connect(pool_id=input)
-    
-    if res:
-      print(f'Connected to pool {input}')
-    else:
-      print(f'Could not connect to pool {input}')
-    
-  
-  def do_create(self, input):
-    res = vms.pool_create()
-    
-    if res:
-      print(f'Pool created {res}')
-    else:
-      print(f'Could not create pool {input}')
-
+   
 
   def do_add(self, input):
     _args = parse(input)
@@ -94,7 +85,7 @@ class VmShell(Cmd):
   
   def help_add(self):
     print('Add VM instance to pool')
-    print('add small redos 2 - add 2 VM instance type small with os RedOS')
+    print('add small redos73 - add VM instance type small with os RedOS 7.3')
     
 
   def complete_add(self, text, line, begidx, endidx) -> list:
@@ -109,14 +100,42 @@ class VmShell(Cmd):
     vms.pool_apply()
   
   
+  def complete_pool(self, text, line, begidx, endidx) -> list:
+    return [i for i in self.pool_cmds if i.startswith(text)]
+
+
   def do_pool(self, input):
-    if input == 'plan':
+    _args = parse(input)
+    
+    if not (_args and _args[0] in self.pool_cmds):
+      self.err.append(f'pool has only {self.pool_cmds} command')
+      
+      if self.show_error():
+        return None
+    
+    if _args[0] == 'create':
+      _res = vms.pool_create()
+      
+      if _res:
+        print(f'Pool created {_res}')
+      else:
+        print(f'Could not create pool')
+        
+    elif _args[0] == 'connect':
+      res = vms.pool_connect(pool_id=_args[1])
+    
+      if res:
+        print(f'Connected to pool {_args[1]}')
+      else:
+        print(f'Could not connect to pool {_args[1]}')
+        
+    elif _args[0] == 'plan':
       vms.pool_plan()
-    if input == 'apply':
+    elif _args[0] == 'apply':
       vms.pool_apply()
-    if input == 'destroy':
+    elif _args[0] == 'destroy':
       vms.pool_destroy()
-    if input == 'list':
+    elif _args[0] == 'list':
       _res = vms.pool_list()
       
       if _res:
