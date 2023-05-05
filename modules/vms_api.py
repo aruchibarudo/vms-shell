@@ -36,10 +36,13 @@ class VMS():
     
     pool_id = uuid4()
     self.logger.debug(f'Create pool {pool_id}')
+    self.pool.state = pool.PoolState.CREATE
     response = self.http.post(f'{self.vms_api}/pool', params=params)
     data = response.json().get('data')
     pool_id = data.get('id')
     self.pool_id = pool_id
+    self.pool = pool.TVMPool(**data)
+    
     logging.debug(f'Pool {pool_id} created: {data}')
     return self.pool_id
     
@@ -52,15 +55,15 @@ class VMS():
     
 
   @http_exception    
-  def pool_connect(self, pool_id: UUID):
+  def pool_select(self, pool_id: UUID):
     self.pool_id = pool_id
-    self.logger.debug(f'Connect to pool {pool_id}')
+    self.logger.debug(f'Select pool {pool_id}')
     response = self.http.get(f'{self.vms_api}/pool/{pool_id}', timeout=self.http_timeout)
     _res = response.json()
     
     if _res.get('status') == 'OK':
       self.pool = pool.TVMPool(**_res.get('data'))
-      self.logger.debug(f'Connected to pool {pool_id}')
+      self.logger.debug(f'Select pool {pool_id}')
     else:
       self.logger.debug(f'Pool {pool_id} not found')
       
@@ -70,7 +73,7 @@ class VMS():
   @http_exception
   def pool_get(self):
     self.logger.debug(f'Show pool {self.pool_id}')
-    response = self.http.get(f'{self.vms_api}/pool', timeout=self.http_timeout)
+    response = self.http.get(f'{self.vms_api}/pool/{self.pool_id}', timeout=self.http_timeout)
     _res = response.json()
     
     if(_res.get('status') == 'OK'):
@@ -78,21 +81,6 @@ class VMS():
       self.logger.debug(f'Pool {self.pool_id} OK: {_res}')
     else:
       self.logger.debug(f'Pool {self.pool_id} ERROR: {_res}')
-    
-    if len(self.pool.items) > 0:
-      
-      for item in self.pool.items:
-        yield {
-          'id': str(item.id),
-          'name': item.name,
-          'os': item.os.value,
-          'cpu': item.config.CPU,
-          'memory': item.config.MEMORY,
-          'disk': item.config.DISK
-        }
-        
-    else:  
-      return []
     
 
   def pool_show(self):
@@ -124,6 +112,7 @@ class VMS():
 
     _vm = pool.TVM(
       type = type,
+      # TODO: Необходим генератор уникальных имен
       name = f'{self.pool.vm_name_prefix}{(len(self.pool.items) + 1)}',
       os = os,
       state = 'NEW',
@@ -148,6 +137,7 @@ class VMS():
 
   @http_exception
   def pool_apply(self):
+    self.pool.state = pool.PoolState.APPLY
     response = self.http.post(f'{self.vms_api}/pool/apply', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -161,6 +151,7 @@ class VMS():
   
   @http_exception
   def pool_plan(self):
+    self.pool.state = pool.PoolState.PLAN
     response = self.http.post(f'{self.vms_api}/pool/plan', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -174,6 +165,7 @@ class VMS():
       
   @http_exception
   def pool_destroy(self):
+    self.pool.state = pool.PoolState.DESTROY
     response = self.http.post(f'{self.vms_api}/pool/destroy', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -183,3 +175,17 @@ class VMS():
     else:
       _res = response.json()
       self.pool = pool.TVMPool(**_res.get('data'))
+      
+    
+  @http_exception
+  def update_state(self):
+    response = self.http.get(f'{self.vms_api}/pool/state', timeout=self.http_timeout)
+
+    if(response.status_code >= 400):
+      print('Error')
+      print(response.text)
+      print(self.pool.json())
+    else:
+      _res = response.json()
+      self.pool = pool.TVMPool(**_res.get('data'))
+    

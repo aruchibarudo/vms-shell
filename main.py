@@ -122,12 +122,12 @@ class VmShell(Cmd):
         print(f'Could not create pool')
         
     elif _args[0] == 'connect':
-      res = vms.pool_connect(pool_id=_args[1])
+      res = vms.pool_select(pool_id=_args[1])
     
       if res:
-        print(f'Connected to pool {_args[1]}')
+        print(f'Selected pool {_args[1]}')
       else:
-        print(f'Could not connect to pool {_args[1]}')
+        print(f'Could not select pool {_args[1]}')
         
     elif _args[0] == 'plan':
       vms.pool_plan()
@@ -153,7 +153,7 @@ class VmShell(Cmd):
     else:
       print(f'Pool id: {vms.pool_id}')
       print(f'owner: {vms.pool.owner}')
-      print(f'State: {vms.pool.state}')
+      print(f'State: {vms.pool.state.value}')
       print(f'{TITLE_NUMBER:>3}| {TITLE_ID:38}| {TITLE_NAME:8}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
       print('-'*74)
       for idx, item in enumerate(items):

@@ -1,9 +1,15 @@
-from enum import Enum
+from enum import Enum, auto
 from typing import List, Optional, Union
 from pydantic import BaseModel
 from uuid import uuid4, UUID
 
 
+
+class AutoEnum(Enum):
+  def _generate_next_value_(name, start, count, last_values):
+    return name
+      
+      
 class MyEnum(Enum):
 
   @classmethod
@@ -57,12 +63,25 @@ class TVM(BaseModel):
   config: TVMConfig
   os: TVMOs
   state: Optional[str] = None
+   
 
-
+class PoolState(AutoEnum):
+  CREATE = auto()
+  CREATED = auto()
+  PLAN = auto()
+  PLANNED = auto()
+  APPLY = auto()
+  RUNNING = auto()
+  FAILED = auto()
+  DESTROY = auto()
+  DESTROYED = auto()
+  DELETE = auto()
+  
+  
 class TVMPool(BaseModel):
   id: UUID = None
   vm_name_prefix: str = 'spb41tp9223-'
-  state: str = None
+  state: PoolState = None
   site: str = "SPB41"
   api_version: str = 'v1'
   items: Union[List[TVM], list] = list()
