@@ -66,21 +66,26 @@ class TVM(BaseModel):
    
 
 class PoolState(AutoEnum):
+  INIT = auto()
   CREATE = auto()
   CREATED = auto()
   PLAN = auto()
   PLANNED = auto()
+  PENDING = auto()
   APPLY = auto()
   RUNNING = auto()
   FAILED = auto()
   DESTROY = auto()
   DESTROYED = auto()
   DELETE = auto()
-  
-  
+  SUCCESS = auto()
+  STARTED = auto()
+
+
 class TVMPool(BaseModel):
   id: UUID = None
   vm_name_prefix: str = 'spb41tp9223-'
+  task_id: UUID = None
   state: PoolState = None
   site: str = "SPB41"
   api_version: str = 'v1'

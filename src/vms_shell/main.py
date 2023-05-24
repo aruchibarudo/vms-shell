@@ -71,7 +71,6 @@ class VmShell(Cmd):
   def do_hello(self, input):
     print(f'Hello "{input}"')
   
-   
 
   def do_add(self, input):
     _args = parse(input)
@@ -163,14 +162,18 @@ class VmShell(Cmd):
     if input == 'yaml':
       print(yaml.dump(items))
     else:
+      _state = self.vms.pool.state.value if self.vms.pool.state else 'INIT'
       print(f'Pool id: {self.vms.pool_id}')
       print(f'owner: {self.vms.pool.owner}')
-      print(f'State: {self.vms.pool.state.value}')
+      print(f'State: {_state}')
       print(f'{TITLE_NUMBER:>3}| {TITLE_ID:38}| {TITLE_NAME:8}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
       print('-'*74)
       for idx, item in enumerate(items):
         print(f'{idx:3}| {item["id"]:38}| {item["name"]:8}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} |')
     
+  
+  def do_state(self, input):
+    self.vms.get_state()
   
   do_EOF = do_exit
 
