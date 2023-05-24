@@ -1,0 +1,29 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vms_shell"
+version = "0.0.4"
+authors = [
+  { name="Artem Batalov", email="batalov.av@gazprom-neft.ru" },
+]
+description = "A VMS shell for interacting with vms api KOA"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    'requests',
+    'pydantic',
+    'PyYAML',
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+vmsh = "vms_shell.main:main"

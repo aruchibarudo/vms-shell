@@ -2,13 +2,20 @@
 
 import logging
 from cmd import Cmd
+from typing import IO, Union
 import yaml
-from modules.vms_api import *
+import os
 
+if __name__ == '__main__':
+  from modules.vms_api import *
+else: 
+  from .modules.vms_api import *
+  
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
 VMS_API_USE_TLS = False
+USERNAME = os.getlogin()
 
 if VMS_API_USE_TLS:
   VMS_API_BASE_URL = f'https://{VMS_API_HOST}'
@@ -41,6 +48,11 @@ class VmShell(Cmd):
     'destroy'
   )
 
+
+  def __init__(self, completekey: str = "tab", stdin: IO[str] = None, stdout: IO[str] = None) -> None:
+    super().__init__(completekey, stdin, stdout)
+    self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL)
+    
   def show_error(self, msg: str=None) -> bool:
     
     if len(self.err) > 0:
@@ -80,7 +92,7 @@ class VmShell(Cmd):
       _qty = 1
       
     if not self.show_error():
-      vms.vm_add(type=_args[0], os=_args[1], qty=_qty)
+      self.vms.vm_add(type=_args[0], os=_args[1], qty=_qty)
   
   
   def help_add(self):
@@ -93,11 +105,11 @@ class VmShell(Cmd):
   
   
   def do_rm(self, input):
-    vms.vm_rm(input)
+    self.vms.vm_rm(input)
 
 
   def do_apply(self, input):
-    vms.pool_apply()
+    self.vms.pool_apply()
   
   
   def complete_pool(self, text, line, begidx, endidx) -> list:
@@ -114,7 +126,7 @@ class VmShell(Cmd):
         return None
     
     if _args[0] == 'create':
-      _res = vms.pool_create()
+      _res = self.vms.pool_create()
       
       if _res:
         print(f'Pool created {_res}')
@@ -122,7 +134,7 @@ class VmShell(Cmd):
         print(f'Could not create pool')
         
     elif _args[0] == 'connect':
-      res = vms.pool_select(pool_id=_args[1])
+      res = self.vms.pool_select(pool_id=_args[1])
     
       if res:
         print(f'Selected pool {_args[1]}')
@@ -130,13 +142,13 @@ class VmShell(Cmd):
         print(f'Could not select pool {_args[1]}')
         
     elif _args[0] == 'plan':
-      vms.pool_plan()
+      self.vms.pool_plan()
     elif _args[0] == 'apply':
-      vms.pool_apply()
+      self.vms.pool_apply()
     elif _args[0] == 'destroy':
-      vms.pool_destroy()
+      self.vms.pool_destroy()
     elif _args[0] == 'list':
-      _res = vms.pool_list()
+      _res = self.vms.pool_list()
       
       if _res:
         print(f'Selected: {_res.get("selected")}')
@@ -146,14 +158,14 @@ class VmShell(Cmd):
       
         
   def do_show(self, input):
-    items = list(vms.pool_show())
+    items = list(self.vms.pool_show())
     
     if input == 'yaml':
       print(yaml.dump(items))
     else:
-      print(f'Pool id: {vms.pool_id}')
-      print(f'owner: {vms.pool.owner}')
-      print(f'State: {vms.pool.state.value}')
+      print(f'Pool id: {self.vms.pool_id}')
+      print(f'owner: {self.vms.pool.owner}')
+      print(f'State: {self.vms.pool.state.value}')
       print(f'{TITLE_NUMBER:>3}| {TITLE_ID:38}| {TITLE_NAME:8}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
       print('-'*74)
       for idx, item in enumerate(items):
@@ -168,11 +180,12 @@ def parse(arg: str):
   return tuple(arg.split())
 
 
-log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
-
-if __name__ == '__main__':
+def main():
+  log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
   logging.basicConfig(format=log_format, level=logging.DEBUG)
   sh = VmShell()
-  vms = VMS(username='batalov.av', vms_api=VMS_API_BASE_URL)
   sh.cmdloop()
+
+if __name__ == '__main__':
+  main()
