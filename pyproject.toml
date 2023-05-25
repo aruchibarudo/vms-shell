@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vms_shell"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
   { name="Artem Batalov", email="batalov.av@gazprom-neft.ru" },
 ]
@@ -18,6 +18,7 @@ dependencies = [
     'requests',
     'pydantic',
     'PyYAML',
+    'asynccmd',
 ]
 classifiers = [
   "Programming Language :: Python :: 3",

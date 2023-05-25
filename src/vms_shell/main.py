@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import logging
-from cmd import Cmd
+from asynccmd import Cmd
 from typing import IO, Union
 import yaml
 import os
+import sys
+from contextlib import suppress
 
 if __name__ == '__main__':
   from modules.vms_api import *
@@ -41,7 +43,7 @@ class VmShell(Cmd):
   err = []
   pool_cmds = (
     'create',
-    'connect',
+    'select',
     'plan',
     'apply',
     'list',
@@ -49,12 +51,25 @@ class VmShell(Cmd):
   )
 
 
-  def __init__(self, completekey: str = "tab", stdin: IO[str] = None, stdout: IO[str] = None) -> None:
-    super().__init__(completekey, stdin, stdout)
+  def __init__(self, mode: str="Reader", intro: str=None, prompt: str='vms> '):
+    super().__init__(mode=mode)
+    self.intro = intro
+    self.prompt = prompt
+    self.loop = None
     self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL)
+
     
+  def _emptyline(self, line):
+      """
+      handler for empty line if entered.
+      :param line: this is unused arg (TODO: remove)
+      :return: None
+      """
+      return
+
+
   def show_error(self, msg: str=None) -> bool:
-    
+        
     if len(self.err) > 0:
       [print(f'*** Error: {i}') for i in self.err]
       self.err = []
@@ -63,11 +78,6 @@ class VmShell(Cmd):
     return False
     
   
-  def do_exit(self, input):
-    print("bye")
-    return True
-  
-
   def do_hello(self, input):
     print(f'Hello "{input}"')
   
@@ -132,7 +142,7 @@ class VmShell(Cmd):
       else:
         print(f'Could not create pool')
         
-    elif _args[0] == 'connect':
+    elif _args[0] == 'select':
       res = self.vms.pool_select(pool_id=_args[1])
     
       if res:
@@ -142,10 +152,13 @@ class VmShell(Cmd):
         
     elif _args[0] == 'plan':
       self.vms.pool_plan()
+      self.loop.create_task(self.vms.get_state(self.loop))
     elif _args[0] == 'apply':
       self.vms.pool_apply()
+      self.loop.create_task(self.vms.get_state(self.loop))
     elif _args[0] == 'destroy':
       self.vms.pool_destroy()
+      self.loop.create_task(self.vms.get_state(self.loop))
     elif _args[0] == 'list':
       _res = self.vms.pool_list()
       
@@ -172,10 +185,28 @@ class VmShell(Cmd):
         print(f'{idx:3}| {item["id"]:38}| {item["name"]:8}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} |')
     
   
+  def do_tasks(self, input):
+      """
+      Our example method. Type "tasks <arg>"
+      :param arg: contain args that go after command
+      :return: None
+      """
+      if sys.version_info >= (3, 8, 0):
+          pending = asyncio.all_tasks(loop=self.loop)
+      else:
+          pending = asyncio.Task.all_tasks(loop=self.loop)
+      for task in pending:
+          print(task)
+
+  def start(self, loop=None):
+      self.loop = loop
+      super().cmdloop(loop=loop)
+        
+  
   def do_state(self, input):
     self.vms.get_state()
-  
-  do_EOF = do_exit
+    
+  #do_EOF = do_exit
 
 
 def parse(arg: str):
@@ -184,11 +215,34 @@ def parse(arg: str):
 
 
 def main():
+  if sys.platform == 'win32':
+      loop = asyncio.ProactorEventLoop()
+      mode = "Run"
+  else:
+      loop = asyncio.get_event_loop()
+      mode = "Reader"
+      
   log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
   logging.basicConfig(format=log_format, level=logging.DEBUG)
-  sh = VmShell()
-  sh.cmdloop()
+  sh = VmShell(mode=mode, intro="This is example", prompt="vms> ")
+  sh.start(loop=loop)
 
+  try:
+      loop.run_forever()
+  except KeyboardInterrupt:
+      print('Exiting')
+      loop.stop()
+      if sys.version_info >= (3, 8, 0):
+        pending = asyncio.all_tasks(loop=loop)
+      else:
+        pending = asyncio.Task.all_tasks(loop=loop)
+      for task in pending:
+          task.cancel()
+          with suppress(asyncio.CancelledError):
+              loop.run_until_complete(task)
+  finally:
+    loop.close()
+    
 if __name__ == '__main__':
   main()

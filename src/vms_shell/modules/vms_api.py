@@ -4,6 +4,7 @@ import logging
 import requests
 from . import pool
 import json
+import asyncio
 
 def http_exception(func):
   def wrapper(*args, **kwargs):
@@ -189,20 +190,30 @@ class VMS():
       _res = response.json()
       self.pool = pool.TVMPool(**_res.get('data'))
 
+  
   @http_exception
-  def get_state(self):
-    _task_id = self.pool.task_id
-    response = self.http.get(f'{self.vms_api}/tasks/{_task_id}', timeout=self.http_timeout)
+  async def get_state(self, loop):
+    asyncio.set_event_loop(loop)  # set correct event loop
+    time_to_sleep = 5
+    
+    while True:
+      _task_id = self.pool.task_id
+      response = self.http.get(f'{self.vms_api}/tasks/{_task_id}', timeout=self.http_timeout)
+      #print("Wake up! I was slept for {0}s".format(time_to_sleep))
 
-    if(response.status_code >= 400):
-      print('Error')
-      print(response.text)
-      print(self.pool.json())
-    else:
-      _res = response.json()
-      new_state = _res.get('detail')[0]
-      
-      if self.pool.state != pool.PoolState(new_state):
-        print(f'State changed: {self.pool.state.value} -> {new_state} ')
-      
-      self.pool.state = pool.PoolState(new_state)
+      if(response.status_code >= 400):
+        print('Error')
+        print(response.text)
+        print(self.pool.json())
+      else:
+        _res = response.json()
+        new_state = _res.get('detail')[0]
+        
+        if self.pool.state != pool.PoolState(new_state):
+          print(f'State changed: {self.pool.state.value} -> {new_state} ')
+          self.pool.state = pool.PoolState(new_state)
+        
+        if new_state in ('FAILED', 'SUCCESS'):
+          return
+        
+      await asyncio.sleep(time_to_sleep)
