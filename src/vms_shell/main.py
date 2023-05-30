@@ -6,13 +6,16 @@ from typing import IO, Union
 import yaml
 import os
 import sys
+
 from contextlib import suppress
 
 if __name__ == '__main__':
   from modules.vms_api import *
 else: 
   from .modules.vms_api import *
-  
+
+
+VERSION = '0.0.8'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -78,8 +81,8 @@ class VmShell(Cmd):
     return False
     
   
-  def do_hello(self, input):
-    print(f'Hello "{input}"')
+  def do_version(self, input):
+    print(f'v{VERSION}')
   
 
   def do_add(self, input):
@@ -152,13 +155,13 @@ class VmShell(Cmd):
         
     elif _args[0] == 'plan':
       self.vms.pool_plan()
-      self.loop.create_task(self.vms.get_state(self.loop))
+      self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
     elif _args[0] == 'apply':
       self.vms.pool_apply()
-      self.loop.create_task(self.vms.get_state(self.loop))
+      self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
     elif _args[0] == 'destroy':
       self.vms.pool_destroy()
-      self.loop.create_task(self.vms.get_state(self.loop))
+      self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
     elif _args[0] == 'list':
       _res = self.vms.pool_list()
       
@@ -225,7 +228,7 @@ def main():
   log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
   logging.basicConfig(format=log_format, level=logging.DEBUG)
-  sh = VmShell(mode=mode, intro="This is example", prompt="vms> ")
+  sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ")
   sh.start(loop=loop)
 
   try:

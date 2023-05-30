@@ -75,6 +75,7 @@ class PoolState(AutoEnum):
   APPLY = auto()
   RUNNING = auto()
   FAILED = auto()
+  FAILURE = auto()
   DESTROY = auto()
   DESTROYED = auto()
   DELETE = auto()

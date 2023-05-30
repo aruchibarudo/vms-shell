@@ -5,7 +5,14 @@ import requests
 from . import pool
 import json
 import asyncio
+import sys
 
+if sys.platform == 'win32':
+  from pyreadline3 import Readline
+  readline = Readline()
+else:
+  import readline
+  
 def http_exception(func):
   def wrapper(*args, **kwargs):
     try:
@@ -192,12 +199,12 @@ class VMS():
 
   
   @http_exception
-  async def get_state(self, loop):
+  async def get_state(self, loop, pool_id: UUID, task_id: UUID, prompt: str=None, buffer: str=''):
     asyncio.set_event_loop(loop)  # set correct event loop
     time_to_sleep = 5
     
     while True:
-      _task_id = self.pool.task_id
+      _task_id = task_id
       response = self.http.get(f'{self.vms_api}/tasks/{_task_id}', timeout=self.http_timeout)
       #print("Wake up! I was slept for {0}s".format(time_to_sleep))
 
@@ -210,10 +217,14 @@ class VMS():
         new_state = _res.get('detail')[0]
         
         if self.pool.state != pool.PoolState(new_state):
-          print(f'State changed: {self.pool.state.value} -> {new_state} ')
+          print()
+          print(f'State changed (pool {pool_id}): {self.pool.state.value} -> {new_state}')
           self.pool.state = pool.PoolState(new_state)
+          
+          if prompt:
+            print(prompt, readline.get_line_buffer(), sep='', end='', flush=True)
         
-        if new_state in ('FAILED', 'SUCCESS'):
+        if new_state in ('FAILURE', 'SUCCESS'):
           return
         
       await asyncio.sleep(time_to_sleep)
