@@ -11,8 +11,10 @@ from contextlib import suppress
 
 if __name__ == '__main__':
   from modules.vms_api import *
+  from modules.namer import *
 else: 
   from .modules.vms_api import *
+  from .modules.namer import *
 
 
 VERSION = '0.0.8'
@@ -20,6 +22,7 @@ VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
 VMS_API_USE_TLS = False
+NAMER_API = 'http://spb99tpagent01:8443'
 USERNAME = os.getlogin()
 
 if VMS_API_USE_TLS:
@@ -60,6 +63,7 @@ class VmShell(Cmd):
     self.prompt = prompt
     self.loop = None
     self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL)
+    self.namer = Namer(api_url=NAMER_API)
 
     
   def _emptyline(self, line):
@@ -138,7 +142,8 @@ class VmShell(Cmd):
         return None
     
     if _args[0] == 'create':
-      _res = self.vms.pool_create()
+      _name = self.namer.get_prefix()
+      _res = self.vms.pool_create(name=_name)
       
       if _res:
         print(f'Pool created {_res}')
@@ -159,6 +164,7 @@ class VmShell(Cmd):
     elif _args[0] == 'apply':
       self.vms.pool_apply()
       self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
+      self.namer.park_prefix(prefix=self.vms.pool.vm_name_prefix)
     elif _args[0] == 'destroy':
       self.vms.pool_destroy()
       self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))

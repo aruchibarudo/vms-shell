@@ -3,7 +3,6 @@ from collections.abc import Iterable
 import logging
 import requests
 from . import pool
-import json
 import asyncio
 import sys
 
@@ -37,14 +36,19 @@ class VMS():
 
   
   @http_exception
-  def pool_create(self):
+  def pool_create(self, name: str=None):
     params = {
-      'owner': self.username
+      'owner': self.username,
+      'name': name
     }
     
     pool_id = uuid4()
     self.logger.debug(f'Create pool {pool_id}')
     self.pool.state = pool.PoolState.CREATE
+    
+    if name:
+      self.pool.vm_name_prefix = name
+    
     response = self.http.post(f'{self.vms_api}/pool', params=params)
     data = response.json().get('data')
     pool_id = data.get('id')
