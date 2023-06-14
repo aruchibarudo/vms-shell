@@ -17,7 +17,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.0.8'
+VERSION = '0.0.9'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -186,6 +186,7 @@ class VmShell(Cmd):
     else:
       _state = self.vms.pool.state.value if self.vms.pool.state else 'INIT'
       print(f'Pool id: {self.vms.pool_id}')
+      print(f'Pool name: {self.vms.pool.name}')
       print(f'owner: {self.vms.pool.owner}')
       print(f'State: {_state}')
       print(f'{TITLE_NUMBER:>3}| {TITLE_ID:38}| {TITLE_NAME:8}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
