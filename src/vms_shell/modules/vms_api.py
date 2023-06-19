@@ -213,12 +213,18 @@ class VMS():
       #print("Wake up! I was slept for {0}s".format(time_to_sleep))
 
       if(response.status_code >= 400):
-        print('Error')
-        print(response.text)
-        print(self.pool.json())
+        logging.error('Error')
+        logging.error(response.text)
+        logging.debug(self.pool.json())
+        
+        if response.status_code == 500:
+          logging.error('Status can not by updated, stop pooling status!')
+          return
+        
       else:
-        _res = response.json()
-        new_state = _res.get('detail')[0]
+        _res = pool.VMSTaskResult(**response.json())
+        logging.debug(_res)
+        new_state = _res.state
         
         if self.pool.state != pool.PoolState(new_state):
           print()

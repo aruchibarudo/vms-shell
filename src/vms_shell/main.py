@@ -8,6 +8,8 @@ import os
 import sys
 
 from contextlib import suppress
+from pathlib import Path
+import configparser
 
 if __name__ == '__main__':
   from modules.vms_api import *
@@ -18,12 +20,13 @@ else:
 
 
 VERSION = '0.0.9'
-VMS_API_HOST = 'spb99tpagent01'
+VMS_API_HOST = 'localhost'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
 VMS_API_USE_TLS = False
-NAMER_API = 'http://spb99tpagent01:8443'
+NAMER_API = 'http://localhost:8443'
 USERNAME = os.getlogin()
+CONFIG_FILENAME = str(Path.home() / Path('.vmshrc'))
 
 if VMS_API_USE_TLS:
   VMS_API_BASE_URL = f'https://{VMS_API_HOST}'
@@ -224,6 +227,21 @@ def parse(arg: str):
   return tuple(arg.split())
 
 
+def load_config(path: str):
+  
+  if Path.is_file(path):
+    config = configparser.ConfigParser()
+    return config.read(path)
+  
+  return None
+
+
+4def save_config(config: configparser.ConfigParser, path: str):
+  
+  with open(path, 'w') as f:
+    config.write(f)
+
+
 def main():
   if sys.platform == 'win32':
       loop = asyncio.ProactorEventLoop()
@@ -235,6 +253,7 @@ def main():
   log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
   logging.basicConfig(format=log_format, level=logging.DEBUG)
+  CONFIG = load_config(CONFIG_FILENAME)
   sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ")
   sh.start(loop=loop)
 

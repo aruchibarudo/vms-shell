@@ -4,7 +4,19 @@ from pydantic import BaseModel
 from uuid import uuid4, UUID
 
 
+class VMSTaskState(BaseModel):
+  name: str
+  task_id: UUID
+  state: str
+  detail: str=None
 
+class VMSTaskResult(BaseModel):
+  pool_id: UUID
+  pool_name: str
+  state: str
+  tasks: List[VMSTaskState]
+  
+  
 class AutoEnum(Enum):
   def _generate_next_value_(name, start, count, last_values):
     return name
@@ -94,3 +106,4 @@ class TVMPool(BaseModel):
   owner: str
   description: str = None
   name: str = None
+  task_ids: list=None
