@@ -19,7 +19,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.0.9'
+VERSION = '0.0.10'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
