@@ -20,11 +20,11 @@ else:
 
 
 VERSION = '0.0.9'
-VMS_API_HOST = 'localhost'
+VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
 VMS_API_USE_TLS = False
-NAMER_API = 'http://localhost:8443'
+NAMER_API = 'http://spb99tpagent01:8443'
 USERNAME = os.getlogin()
 CONFIG_FILENAME = str(Path.home() / Path('.vmshrc'))
 
@@ -60,12 +60,12 @@ class VmShell(Cmd):
   )
 
 
-  def __init__(self, mode: str="Reader", intro: str=None, prompt: str='vms> '):
+  def __init__(self, mode: str="Reader", intro: str=None, prompt: str='vms> ', pool_id: UUID=None):
     super().__init__(mode=mode)
     self.intro = intro
     self.prompt = prompt
     self.loop = None
-    self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL)
+    self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL, pool_id=pool_id)
     self.namer = Namer(api_url=NAMER_API)
 
     
@@ -227,16 +227,20 @@ def parse(arg: str):
   return tuple(arg.split())
 
 
-def load_config(path: str):
+def load_config(path: str) -> configparser.ConfigParser:
+  logging.debug(f'Check config file {path}')
+  conf_file = Path(path)
+  config = configparser.ConfigParser()
   
-  if Path.is_file(path):
-    config = configparser.ConfigParser()
-    return config.read(path)
+  if conf_file.is_file():
+    logging.debug(f'Load config file {str(conf_file)}')
+    config.read(str(conf_file))
   
-  return None
+  return config
 
 
-4def save_config(config: configparser.ConfigParser, path: str):
+def save_config(config: configparser.ConfigParser, path: str):
+  logging.debug(f'Save config file {path}')
   
   with open(path, 'w') as f:
     config.write(f)
@@ -252,15 +256,17 @@ def main():
       
   log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
-  logging.basicConfig(format=log_format, level=logging.DEBUG)
+  logging.basicConfig(format=log_format, level=logging.INFO)
   CONFIG = load_config(CONFIG_FILENAME)
-  sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ")
+  sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ", pool_id=CONFIG['DEFAULT'].get('POOL_ID'))
   sh.start(loop=loop)
 
   try:
       loop.run_forever()
   except KeyboardInterrupt:
       print('Exiting')
+      CONFIG['DEFAULT']['POOL_ID'] = sh.vms.pool_id
+      save_config(config=CONFIG, path=CONFIG_FILENAME)
       loop.stop()
       if sys.version_info >= (3, 8, 0):
         pending = asyncio.all_tasks(loop=loop)

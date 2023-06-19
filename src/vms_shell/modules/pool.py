@@ -14,6 +14,7 @@ class VMSTaskResult(BaseModel):
   pool_id: UUID
   pool_name: str
   state: str
+  state_note: str=None
   tasks: List[VMSTaskState]
   
   
@@ -93,6 +94,7 @@ class PoolState(AutoEnum):
   DELETE = auto()
   SUCCESS = auto()
   STARTED = auto()
+  PROGRESS = auto()
 
 
 class TVMPool(BaseModel):
@@ -100,6 +102,7 @@ class TVMPool(BaseModel):
   vm_name_prefix: str = 'spb41tp9223-'
   task_id: UUID = None
   state: PoolState = None
+  state_note: str = None
   site: str = "SPB41"
   api_version: str = 'v1'
   items: Union[List[TVM], list] = list()

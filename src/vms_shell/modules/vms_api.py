@@ -24,7 +24,7 @@ def http_exception(func):
 
 class VMS():
 
-  def __init__(self, username: str, vms_api: str, pool_id: str=None, logger=None) -> None:
+  def __init__(self, username: str, vms_api: str, pool_id: UUID=None, logger=None) -> None:
     self.logger = logger or logging.getLogger(__name__)
     self.pool_id = pool_id
     self.username = username
@@ -33,6 +33,9 @@ class VMS():
     self.http.headers['Content-type'] = 'application/json'
     self.vms_api = vms_api
     self.pool = pool.TVMPool(owner=username)
+    
+    if self.pool_id:
+      self.pool_select(pool_id=self.pool_id)
 
   
   @http_exception
@@ -218,18 +221,30 @@ class VMS():
         logging.debug(self.pool.json())
         
         if response.status_code == 500:
-          logging.error('Status can not by updated, stop pooling status!')
+          logging.error('Status can not by updated, stop polling status!')
           return
         
       else:
         _res = pool.VMSTaskResult(**response.json())
         logging.debug(_res)
         new_state = _res.state
+        new_task_name = self.pool.state_note
         
-        if self.pool.state != pool.PoolState(new_state):
+        for task in _res.tasks:
+
+          if task.state == 'PROGRESS':
+            new_state = 'PROGRESS'
+            new_task_name = task.name
+        
+        if self.pool.state != pool.PoolState(new_state) or self.pool.state_note != new_task_name:
+          
+          if new_state == 'SUCCESS':
+            new_task_name = _res.state_note
+            
           print()
-          print(f'State changed (pool {pool_id}): {self.pool.state.value} -> {new_state}')
+          print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {new_state}')
           self.pool.state = pool.PoolState(new_state)
+          self.pool.state_note = new_task_name
           
           if prompt:
             print(prompt, readline.get_line_buffer(), sep='', end='', flush=True)
