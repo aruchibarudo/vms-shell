@@ -31,14 +31,29 @@ class VMS():
     self.http_timeout = 3
     self.http = requests.Session()
     self.http.headers['Content-type'] = 'application/json'
-    self.http.cookies.set(domain='techpark.local', name='username', value=username)
+    #self.http.cookies.set(domain='techpark.local', name='username', value=username)
     self.vms_api = vms_api
     self.pool = pool.TVMPool(owner=username)
+    self.login()
     
     if self.pool_id:
       self.pool_select(pool_id=self.pool_id)
 
   
+  @http_exception
+  def login(self):
+    params = {
+      'username': self.username
+    }
+    
+    self.logger.debug(f'Login as {self.username}')
+    
+    response = self.http.post(f'{self.vms_api}/login', params=params)
+    status = response.json().get('status')
+    detail = response.json().get('detail')
+    self.logger.info(f'{detail}: {status}')
+
+    
   @http_exception
   def pool_create(self, name: str=None):
     params = {
