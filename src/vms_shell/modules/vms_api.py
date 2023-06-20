@@ -31,6 +31,7 @@ class VMS():
     self.http_timeout = 3
     self.http = requests.Session()
     self.http.headers['Content-type'] = 'application/json'
+    self.http.cookies.set(domain='techpark.local', name='username', value=username)
     self.vms_api = vms_api
     self.pool = pool.TVMPool(owner=username)
     
