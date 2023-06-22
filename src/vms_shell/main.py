@@ -56,16 +56,17 @@ class VmShell(Cmd):
     'plan',
     'apply',
     'list',
-    'destroy'
+    'destroy',
+    'delete'
   )
 
 
-  def __init__(self, mode: str="Reader", intro: str=None, prompt: str='vms> ', pool_id: UUID=None):
+  def __init__(self, mode: str="Reader", intro: str=None, prompt: str='vms> ', name: str=None):
     super().__init__(mode=mode)
     self.intro = intro
     self.prompt = prompt
     self.loop = None
-    self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL, pool_id=pool_id)
+    self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL, name=name)
     self.namer = Namer(api_url=NAMER_API)
 
     
@@ -154,12 +155,17 @@ class VmShell(Cmd):
         print(f'Could not create pool')
         
     elif _args[0] == 'select':
-      res = self.vms.pool_select(pool_id=_args[1])
-    
-      if res:
-        print(f'Selected pool {_args[1]}')
+
+      if len(_args) == 2:
+        res = self.vms.pool_select(name=_args[1])
+      
+        if res:
+          print(f'Selected pool {_args[1]}')
+        else:
+          print(f'Could not select pool {_args[1]}')
+          
       else:
-        print(f'Could not select pool {_args[1]}')
+        print('Pool must be specified ex. "pool select <pool_name>"')
         
     elif _args[0] == 'plan':
       self.vms.pool_plan()
@@ -171,14 +177,19 @@ class VmShell(Cmd):
     elif _args[0] == 'destroy':
       self.vms.pool_destroy()
       self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
+    elif _args[0] == 'delete':
+      _res = self.vms.pool_delete()
+      self.namer.free_prefix(self.vms.pool.vm_name_prefix)
     elif _args[0] == 'list':
       _res = self.vms.pool_list()
       
       if _res:
-        print(f'Selected: {_res.get("selected")}')
         
         for item in _res.get('pools'):
-          print (f'Pool: {item}')
+          if self.vms.pool.name == item:
+            print(f'Pool: *{item}')
+          else:
+            print(f'Pool: {item}')
       
         
   def do_show(self, input):
@@ -256,16 +267,21 @@ def main():
       
   log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
-  logging.basicConfig(format=log_format, level=logging.INFO)
+  logging.basicConfig(format=log_format, level=logging.DEBUG)
   CONFIG = load_config(CONFIG_FILENAME)
-  sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ", pool_id=CONFIG['DEFAULT'].get('POOL_ID'))
+  sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ", name=CONFIG['DEFAULT'].get('POOL_NAME'))
   sh.start(loop=loop)
 
   try:
       loop.run_forever()
   except KeyboardInterrupt:
       print('Exiting')
-      CONFIG['DEFAULT']['POOL_ID'] = sh.vms.pool_id
+      
+      if sh.vms.pool.name:
+        CONFIG['DEFAULT']['POOL_NAME'] = sh.vms.pool.name
+      else:
+        CONFIG.remove_option(section='DEFAULT', option='POOL_NAME')
+        
       save_config(config=CONFIG, path=CONFIG_FILENAME)
       loop.stop()
       if sys.version_info >= (3, 8, 0):

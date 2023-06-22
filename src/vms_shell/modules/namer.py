@@ -40,8 +40,8 @@ class Namer():
   def free_prefix(self, prefix: str) -> bool:
     url = f'{self.api_url}/unlock/{prefix}'
     respone = self.http.put(url)
-    _res = PrefixResult(**respone.json())
+    _res = respone.json()
     if respone.status_code == 200:
-      return True
+      return _res.get('result') == 'OK'
     else:
       respone.raise_for_status()

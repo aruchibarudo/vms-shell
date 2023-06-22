@@ -24,20 +24,23 @@ def http_exception(func):
 
 class VMS():
 
-  def __init__(self, username: str, vms_api: str, pool_id: UUID=None, logger=None) -> None:
+  def __init__(self, username: str, vms_api: str, name: str=None, logger=None) -> None:
     self.logger = logger or logging.getLogger(__name__)
-    self.pool_id = pool_id
+    self.name = name
     self.username = username
     self.http_timeout = 3
+    self.pool_id = None
     self.http = requests.Session()
     self.http.headers['Content-type'] = 'application/json'
     #self.http.cookies.set(domain='techpark.local', name='username', value=username)
     self.vms_api = vms_api
     self.pool = pool.TVMPool(owner=username)
+    self.pools = {}
     self.login()
+    self.pool_list()
     
-    if self.pool_id:
-      self.pool_select(pool_id=self.pool_id)
+    if self.name:
+      self.pool_select(name=self.name)
 
   
   @http_exception
@@ -81,26 +84,43 @@ class VMS():
   @http_exception
   def pool_list(self):
     response = self.http.get(f'{self.vms_api}/pool/all', timeout=self.http_timeout)
-    _res = response.json()
-    return _res.get('data')
+    _res = response.json().get('data')
+    self.pools = _res.get('pools')
+    return _res
     
 
   @http_exception    
-  def pool_select(self, pool_id: UUID):
-    self.pool_id = pool_id
-    self.logger.debug(f'Select pool {pool_id}')
-    response = self.http.get(f'{self.vms_api}/pool/{pool_id}', timeout=self.http_timeout)
+  def pool_select(self, name: str):
+    self.pool_id = self.pools.get(name)
+    self.logger.debug(f'Select pool {name}/{self.pool_id}')
+    response = self.http.get(f'{self.vms_api}/pool/{name}', timeout=self.http_timeout)
     _res = response.json()
     
     if _res.get('status') == 'OK':
       self.pool = pool.TVMPool(**_res.get('data'))
-      self.logger.debug(f'Select pool {pool_id}')
+      self.logger.debug(f'Selected pool {name}')
     else:
-      self.logger.debug(f'Pool {pool_id} not found')
+      self.logger.debug(f'Pool {name} not found')
       
     return _res.get('status') == 'OK'
     
     
+  @http_exception    
+  def pool_delete(self):
+    self.logger.debug(f'Delete pool {self.pool_id}')
+    response = self.http.delete(f'{self.vms_api}/pool/{self.pool_id}', timeout=self.http_timeout)
+    _res = response.json()
+    
+    if _res.get('status') == 'OK':
+      self.pool = pool.TVMPool(owner=self.username)
+      self.logger.debug(f'Pool {self.pool_id} deleted')
+      self.pool_id = None
+    else:
+      self.logger.debug(f'Can not delete pool {self.pool_id}')
+      
+    return _res.get('status') == 'OK'
+  
+  
   @http_exception
   def pool_get(self):
     self.logger.debug(f'Show pool {self.pool_id}')
@@ -177,6 +197,7 @@ class VMS():
       print(self.pool.json())
     else:
       _res = response.json()
+      self.logger.debug(f'Apply result: {_res}')
       self.pool = pool.TVMPool(**_res.get('data'))
       
   
