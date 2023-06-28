@@ -4,7 +4,20 @@ from pydantic import BaseModel
 from uuid import uuid4, UUID
 
 
+class VMSTaskState(BaseModel):
+  name: str
+  task_id: UUID
+  state: str
+  detail: str=None
 
+class VMSTaskResult(BaseModel):
+  pool_id: UUID
+  pool_name: str
+  state: str
+  state_note: str=None
+  tasks: List[VMSTaskState]
+  
+  
 class AutoEnum(Enum):
   def _generate_next_value_(name, start, count, last_values):
     return name
@@ -30,7 +43,8 @@ class TVMTypes(str, MyEnum):
 class TVMOs(str, MyEnum):
   redos73 = 'redos73'
   astra17orel = 'astra17orel'
-
+  astra173voronezh = 'astra173voronezh'
+  win10 = 'win10'
 
 class TVMConfig(BaseModel):
   CPU = 0
@@ -75,11 +89,13 @@ class PoolState(AutoEnum):
   APPLY = auto()
   RUNNING = auto()
   FAILED = auto()
+  FAILURE = auto()
   DESTROY = auto()
   DESTROYED = auto()
   DELETE = auto()
   SUCCESS = auto()
   STARTED = auto()
+  PROGRESS = auto()
 
 
 class TVMPool(BaseModel):
@@ -87,9 +103,11 @@ class TVMPool(BaseModel):
   vm_name_prefix: str = 'spb41tp9223-'
   task_id: UUID = None
   state: PoolState = None
+  state_note: str = None
   site: str = "SPB41"
   api_version: str = 'v1'
   items: Union[List[TVM], list] = list()
   owner: str
   description: str = None
   name: str = None
+  task_ids: list=None
