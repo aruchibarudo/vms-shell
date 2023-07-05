@@ -68,6 +68,7 @@ class VmShell(Cmd):
     self.loop = None
     self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL, name=name)
     self.namer = Namer(api_url=NAMER_API)
+    self.completekey = 'tab'
 
     
   def _emptyline(self, line):
@@ -230,9 +231,76 @@ class VmShell(Cmd):
   def do_state(self, input):
     self.vms.get_state()
     
-  #do_EOF = do_exit
+
+  def get_names(self):
+    # This method used to pull in base class attributes
+    # at a time dir() didn't do it yet.
+    return dir(self.__class__)
 
 
+  def completenames(self, text, *ignored):
+    dotext = 'do_'+text
+    return [a[3:] for a in self.get_names() if a.startswith(dotext)]
+  
+
+  def completedefault(self, *ignored):
+    """Method called to complete an input line when no command-specific
+    complete_*() method is available.
+    By default, it returns an empty list.
+    """
+    return []
+
+
+  def parseline(self, line):
+      """Parse the line into a command name and a string containing
+      the arguments.  Returns a tuple containing (command, args, line).
+      'command' and 'args' may be None if the line couldn't be parsed.
+      """
+      line = line.strip()
+      if not line:
+          return None, None, line
+      elif line[0] == '?':
+          line = 'help ' + line[1:]
+      elif line[0] == '!':
+          if hasattr(self, 'do_shell'):
+              line = 'shell ' + line[1:]
+          else:
+              return None, None, line
+      i, n = 0, len(line)
+      while i < n and line[i] in self.identchars: i = i+1
+      cmd, arg = line[:i], line[i:].strip()
+      return cmd, arg, line
+    
+  
+  def complete(self, text, state):
+    """Return the next possible completion for 'text'.
+    If a command has not been entered, then complete against command list.
+    Otherwise try to call complete_<command> to get list of completions.
+    """
+    if state == 0:
+        import readline
+        origline = readline.get_line_buffer()
+        line = origline.lstrip()
+        stripped = len(origline) - len(line)
+        begidx = readline.get_begidx() - stripped
+        endidx = readline.get_endidx() - stripped
+        if begidx>0:
+            cmd, args, foo = self.parseline(line)
+            if cmd == '':
+                compfunc = self.completedefault
+            else:
+                try:
+                    compfunc = getattr(self, 'complete_' + cmd)
+                except AttributeError:
+                    compfunc = self.completedefault
+        else:
+            compfunc = self.completenames
+        self.completion_matches = compfunc(text, line, begidx, endidx)
+    try:
+        return self.completion_matches[state]
+    except IndexError:
+        return None
+      
 def parse(arg: str):
   'Convert a series of zero or more numbers to an argument tuple'
   return tuple(arg.split())

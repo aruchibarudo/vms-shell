@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
 from pydantic import BaseModel
 from uuid import uuid4, UUID
 
@@ -96,7 +96,13 @@ class PoolState(AutoEnum):
   SUCCESS = auto()
   STARTED = auto()
   PROGRESS = auto()
+  
 
+class CoUser(BaseModel):
+  login: str
+  role: Literal['ADMIN', 'USER'] = 'USER'
+  display_name: str
+  
 
 class TVMPool(BaseModel):
   id: UUID = None
@@ -111,3 +117,4 @@ class TVMPool(BaseModel):
   description: str = None
   name: str = None
   task_ids: list=None
+  users: CoUser | None
