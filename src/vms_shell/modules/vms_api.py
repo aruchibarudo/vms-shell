@@ -146,7 +146,8 @@ class VMS():
           'os': item.os.value,
           'cpu': item.config.CPU,
           'memory': item.config.MEMORY,
-          'disk': item.config.DISK
+          'disk': item.config.DISK,
+          'notes': item.notes
         }
         
     else:  
@@ -161,7 +162,7 @@ class VMS():
     return max(_idxs) + 1 if _idxs else 1
 
     
-  def vm_add(self, type: str, os: str, qty: int=1):
+  def vm_add(self, type: str, os: str, qty: int=1, description: str=None):
     
     if type == 'small':
       _config = pool.TVMSmall()
@@ -171,11 +172,12 @@ class VMS():
       _config = pool.TVMLarge()
       
     _vm = pool.TVM(
-      type = type,
-      name = f'{self.pool.vm_name_prefix}{self.get_next_index():02}',
-      os = os,
-      state = 'NEW',
-      config = _config
+      type=type,
+      name=f'{self.pool.vm_name_prefix}{self.get_next_index():02}',
+      os=os,
+      state='NEW',
+      config=_config,
+      notes=description
     )
     
     self.pool.items.append(_vm)

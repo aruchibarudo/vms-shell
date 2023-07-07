@@ -77,6 +77,7 @@ class TVM(BaseModel):
   config: TVMConfig
   os: TVMOs
   state: Optional[str] = None
+  notes: str = None
    
 
 class PoolState(AutoEnum):

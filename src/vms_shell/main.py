@@ -5,7 +5,7 @@ from cmd import Cmd
 from threading import Thread
 import yaml
 import os
-import sys
+import shlex
 from pathlib import Path
 import configparser
 
@@ -45,6 +45,7 @@ TITLE_OS = 'Image'
 TITLE_CPU = 'CPU'
 TITLE_MEMORY = 'RAM'
 TITLE_DISK = 'Disk'
+TITLE_NOTE = 'Note'
 
 class VmShell(Cmd):
   prompt = 'vms> '
@@ -89,7 +90,8 @@ class VmShell(Cmd):
 
   def do_add(self, input):
     _args = parse(input)
-    _qty = None
+    _qty = 1
+    _description = None
     
     if not (len(_args) > 0 and pool.TVMTypes.has_value(_args[0])):
       self.err.append(f'First parameter one of {pool.TVMTypes.list()}')
@@ -98,15 +100,10 @@ class VmShell(Cmd):
       self.err.append(f'Second parameter one of {pool.TVMOs.list()}')
 
     if len(_args) == 3:
-      try:
-        _qty = int(_args[2])
-      except ValueError:
-        self.err.append('Third paramter must be an integer')
-    else:
-      _qty = 1
+      _description = _args[2]
       
     if not self.show_error():
-      self.vms.vm_add(type=_args[0], os=_args[1], qty=_qty)
+      self.vms.vm_add(type=_args[0], os=_args[1], qty=_qty, description=_description)
   
   
   def help_add(self):
@@ -226,10 +223,10 @@ class VmShell(Cmd):
       print(f'Pool name: {self.vms.pool.name}')
       print(f'owner: {self.vms.pool.owner}')
       print(f'State: {_state}')
-      print(f'{TITLE_NUMBER:>3}| {TITLE_NAME:14}| {TITLE_OS:18}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
+      print(f'{TITLE_NUMBER:>3}| {TITLE_NAME:14}| {TITLE_OS:18}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}| {TITLE_NOTE}')
       print('-'*63)
       for idx, item in enumerate(items):
-        print(f'{idx:3}| {item["name"]:14}| {item["os"]:18}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} |')
+        print(f'{idx:3}| {item["name"]:14}| {item["os"]:18}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} | {item["notes"]}')
     
   
   def do_state(self, input):
@@ -242,7 +239,7 @@ class VmShell(Cmd):
 
 def parse(arg: str):
   'Convert a series of zero or more numbers to an argument tuple'
-  return tuple(arg.split())
+  return tuple(shlex.split(arg))
 
 
 def load_config(path: str) -> configparser.ConfigParser:
