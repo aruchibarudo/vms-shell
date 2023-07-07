@@ -156,7 +156,7 @@ class VMS():
     _idxs = []
     
     for _vm in self.pool.items:
-      _idxs.append(int(_vm.name.removeprefix(self.pool.vm_name_prefix)))
+      _idxs.append(int(_vm.name.replace(self.pool.vm_name_prefix, '')))
     
     return max(_idxs) + 1 if _idxs else 1
 
