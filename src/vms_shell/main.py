@@ -17,7 +17,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -68,13 +68,8 @@ class VmShell(Cmd):
     #self.completekey = 'tab'
 
     
-  def _emptyline(self, line):
-      """
-      handler for empty line if entered.
-      :param line: this is unused arg (TODO: remove)
-      :return: None
-      """
-      return
+  def emptyline(self):
+      pass
 
 
   def show_error(self, msg: str=None) -> bool:

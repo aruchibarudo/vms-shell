@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vms_shell"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
   { name="Artem Batalov", email="batalov.av@gazprom-neft.ru" },
 ]
