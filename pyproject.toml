@@ -13,7 +13,7 @@ authors = [
 ]
 description = "A VMS shell for interacting with vms api KOA"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 dependencies = [
     'requests',
     'pydantic',
