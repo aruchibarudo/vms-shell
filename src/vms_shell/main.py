@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
 import logging
-from asynccmd import Cmd
-from typing import IO, Union
+from cmd import Cmd
+from threading import Thread
 import yaml
 import os
 import sys
-
-from contextlib import suppress
 from pathlib import Path
 import configparser
 
@@ -19,7 +17,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -61,14 +59,13 @@ class VmShell(Cmd):
   )
 
 
-  def __init__(self, mode: str="Reader", intro: str=None, prompt: str='vms> ', name: str=None):
-    super().__init__(mode=mode)
+  def __init__(self, intro: str=None, prompt: str='vms> ', completekey: str='tab', name: str=None):
+    super().__init__(completekey=completekey)
     self.intro = intro
     self.prompt = prompt
-    self.loop = None
     self.vms = VMS(username=USERNAME, vms_api=VMS_API_BASE_URL, name=name)
     self.namer = Namer(api_url=NAMER_API)
-    self.completekey = 'tab'
+    #self.completekey = 'tab'
 
     
   def _emptyline(self, line):
@@ -170,14 +167,32 @@ class VmShell(Cmd):
         
     elif _args[0] == 'plan':
       self.vms.pool_plan()
-      self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
+      th = Thread(target=self.vms.get_state,
+                  daemon=True,
+                  name=f'{_args[0]} pool {self.vms.name}',
+                  kwargs={'pool_id': self.vms.pool_id,
+                          'task_id':self.vms.pool.task_id,
+                          'prompt': self.prompt})
+      th.start()
     elif _args[0] == 'apply':
       self.vms.pool_apply()
-      self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
+      th = Thread(target=self.vms.get_state,
+                  daemon=True,
+                  name=f'{_args[0]} pool {self.vms.name}',
+                  kwargs={'pool_id': self.vms.pool_id,
+                          'task_id':self.vms.pool.task_id,
+                          'prompt': self.prompt})
+      th.start()
       self.namer.park_prefix(prefix=self.vms.pool.vm_name_prefix)
     elif _args[0] == 'destroy':
       self.vms.pool_destroy()
-      self.loop.create_task(self.vms.get_state(self.loop, pool_id=self.vms.pool_id, task_id=self.vms.pool.task_id, prompt=self.prompt))
+      th = Thread(target=self.vms.get_state,
+                  daemon=True,
+                  name=f'{_args[0]} pool {self.vms.name}',
+                  kwargs={'pool_id': self.vms.pool_id,
+                          'task_id':self.vms.pool.task_id,
+                          'prompt': self.prompt})
+      th.start()
     elif _args[0] == 'delete':
       _res = self.vms.pool_delete()
       self.namer.free_prefix(self.vms.pool.vm_name_prefix)
@@ -210,97 +225,14 @@ class VmShell(Cmd):
         print(f'{idx:3}| {item["id"]:38}| {item["name"]:8}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} |')
     
   
-  def do_tasks(self, input):
-      """
-      Our example method. Type "tasks <arg>"
-      :param arg: contain args that go after command
-      :return: None
-      """
-      if sys.version_info >= (3, 8, 0):
-          pending = asyncio.all_tasks(loop=self.loop)
-      else:
-          pending = asyncio.Task.all_tasks(loop=self.loop)
-      for task in pending:
-          print(task)
-
-  def start(self, loop=None):
-      self.loop = loop
-      super().cmdloop(loop=loop)
-        
-  
   def do_state(self, input):
     self.vms.get_state()
-    
-
-  def get_names(self):
-    # This method used to pull in base class attributes
-    # at a time dir() didn't do it yet.
-    return dir(self.__class__)
-
-
-  def completenames(self, text, *ignored):
-    dotext = 'do_'+text
-    return [a[3:] for a in self.get_names() if a.startswith(dotext)]
-  
-
-  def completedefault(self, *ignored):
-    """Method called to complete an input line when no command-specific
-    complete_*() method is available.
-    By default, it returns an empty list.
-    """
-    return []
-
-
-  def parseline(self, line):
-      """Parse the line into a command name and a string containing
-      the arguments.  Returns a tuple containing (command, args, line).
-      'command' and 'args' may be None if the line couldn't be parsed.
-      """
-      line = line.strip()
-      if not line:
-          return None, None, line
-      elif line[0] == '?':
-          line = 'help ' + line[1:]
-      elif line[0] == '!':
-          if hasattr(self, 'do_shell'):
-              line = 'shell ' + line[1:]
-          else:
-              return None, None, line
-      i, n = 0, len(line)
-      while i < n and line[i] in self.identchars: i = i+1
-      cmd, arg = line[:i], line[i:].strip()
-      return cmd, arg, line
-    
-  
-  def complete(self, text, state):
-    """Return the next possible completion for 'text'.
-    If a command has not been entered, then complete against command list.
-    Otherwise try to call complete_<command> to get list of completions.
-    """
-    if state == 0:
-        import readline
-        origline = readline.get_line_buffer()
-        line = origline.lstrip()
-        stripped = len(origline) - len(line)
-        begidx = readline.get_begidx() - stripped
-        endidx = readline.get_endidx() - stripped
-        if begidx>0:
-            cmd, args, foo = self.parseline(line)
-            if cmd == '':
-                compfunc = self.completedefault
-            else:
-                try:
-                    compfunc = getattr(self, 'complete_' + cmd)
-                except AttributeError:
-                    compfunc = self.completedefault
-        else:
-            compfunc = self.completenames
-        self.completion_matches = compfunc(text, line, begidx, endidx)
-    try:
-        return self.completion_matches[state]
-    except IndexError:
-        return None
       
+
+  def do_EOF(self, line):
+    return True
+  
+
 def parse(arg: str):
   'Convert a series of zero or more numbers to an argument tuple'
   return tuple(arg.split())
@@ -326,42 +258,20 @@ def save_config(config: configparser.ConfigParser, path: str):
 
 
 def main():
-  if sys.platform == 'win32':
-      loop = asyncio.ProactorEventLoop()
-      mode = "Run"
-  else:
-      loop = asyncio.get_event_loop()
-      mode = "Reader"
-      
   log_format = '%(asctime)s [%(name)s] %(levelname)-8s %(message)s'
   logger = logging.getLogger(__name__)
   logging.basicConfig(format=log_format, level=logging.INFO)
   CONFIG = load_config(CONFIG_FILENAME)
-  sh = VmShell(mode=mode, intro=f"VMS shell version {VERSION}", prompt="vms> ", name=CONFIG['DEFAULT'].get('POOL_NAME'))
-  sh.start(loop=loop)
+  sh = VmShell(intro=f"VMS shell version {VERSION}", prompt="vms> ", name=CONFIG['DEFAULT'].get('POOL_NAME'))  
+  sh.cmdloop()
 
-  try:
-      loop.run_forever()
-  except KeyboardInterrupt:
-      print('Exiting')
-      
-      if sh.vms.pool.name:
-        CONFIG['DEFAULT']['POOL_NAME'] = sh.vms.pool.name
-      else:
-        CONFIG.remove_option(section='DEFAULT', option='POOL_NAME')
-        
-      save_config(config=CONFIG, path=CONFIG_FILENAME)
-      loop.stop()
-      if sys.version_info >= (3, 8, 0):
-        pending = asyncio.all_tasks(loop=loop)
-      else:
-        pending = asyncio.Task.all_tasks(loop=loop)
-      for task in pending:
-          task.cancel()
-          with suppress(asyncio.CancelledError):
-              loop.run_until_complete(task)
-  finally:
-    loop.close()
+  if sh.vms.pool.name:
+    CONFIG['DEFAULT']['POOL_NAME'] = sh.vms.pool.name
+  else:
+    CONFIG.remove_option(section='DEFAULT', option='POOL_NAME')
     
+  save_config(config=CONFIG, path=CONFIG_FILENAME)
+    
+
 if __name__ == '__main__':
   main()

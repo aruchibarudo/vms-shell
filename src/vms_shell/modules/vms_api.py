@@ -3,7 +3,7 @@ from collections.abc import Iterable
 import logging
 import requests
 from . import pool
-import asyncio
+from time import sleep
 import sys
 
 if sys.platform == 'win32':
@@ -243,8 +243,7 @@ class VMS():
 
   
   @http_exception
-  async def get_state(self, loop, pool_id: UUID, task_id: UUID, prompt: str=None, buffer: str=''):
-    asyncio.set_event_loop(loop)  # set correct event loop
+  def get_state(self, pool_id: UUID, task_id: UUID, prompt: str=None, buffer: str=''):
     time_to_sleep = 5
     
     while True:
@@ -289,4 +288,4 @@ class VMS():
         if new_state in ('FAILURE', 'SUCCESS'):
           return
         
-      await asyncio.sleep(time_to_sleep)
+      sleep(time_to_sleep)
