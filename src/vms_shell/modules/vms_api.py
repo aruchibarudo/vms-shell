@@ -173,15 +173,15 @@ class VMS():
     self.pool.items.append(_vm)
     
   
-  def vm_rm(self, id: UUID):
+  def vm_rm(self, name: str):
     _vm = []
     
     for item in self.pool.items:
     
-      if str(item.id) != id:
+      if str(item.name) != name:
         _vm.append(item)
       else:
-        print(f'Deleted {id}')
+        print(f'Deleted {name}')
         
     self.pool.items = _vm
     

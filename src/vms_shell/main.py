@@ -17,7 +17,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -41,6 +41,7 @@ if VMS_API_BASE_PATH:
 TITLE_NUMBER = '#'
 TITLE_ID = 'ID'
 TITLE_NAME = 'Name'
+TITLE_OS = 'Image'
 TITLE_CPU = 'CPU'
 TITLE_MEMORY = 'RAM'
 TITLE_DISK = 'Disk'
@@ -114,7 +115,16 @@ class VmShell(Cmd):
     
 
   def complete_add(self, text, line, begidx, endidx) -> list:
-    return [i for i in pool.TVMTypes.list() if i.startswith(text)]
+    _args = parse(line)
+    
+    if not text and len(_args) == 1:
+      return [i for i in pool.TVMTypes.list() if i.startswith(text)]
+    elif not text and len(_args) == 2:
+      return [i for i in pool.TVMOs.list() if i.startswith(text)]
+    elif len(_args) == 2:
+      return [i for i in pool.TVMTypes.list() if i.startswith(text)]
+    elif len(_args) == 3:
+      return [i for i in pool.TVMOs.list() if i.startswith(text)]
   
   
   def do_rm(self, input):
@@ -214,10 +224,10 @@ class VmShell(Cmd):
       print(f'Pool name: {self.vms.pool.name}')
       print(f'owner: {self.vms.pool.owner}')
       print(f'State: {_state}')
-      print(f'{TITLE_NUMBER:>3}| {TITLE_ID:38}| {TITLE_NAME:8}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
-      print('-'*74)
+      print(f'{TITLE_NUMBER:>3}| {TITLE_NAME:14}| {TITLE_OS:18}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}|')
+      print('-'*63)
       for idx, item in enumerate(items):
-        print(f'{idx:3}| {item["id"]:38}| {item["name"]:8}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} |')
+        print(f'{idx:3}| {item["name"]:14}| {item["os"]:18}|{item["cpu"]:4} |{item["memory"]:5} |{item["disk"]:6} |')
     
   
   def do_state(self, input):
