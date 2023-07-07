@@ -152,6 +152,15 @@ class VMS():
     else:  
       return []
     
+  def get_next_index(self) -> int:
+    _idxs = []
+    
+    for _vm in self.pool.items:
+      _idxs.append(int(_vm.name.removeprefix(self.pool.vm_name_prefix)))
+    
+    return max(_idxs) + 1 if _idxs else 1
+
+    
   def vm_add(self, type: str, os: str, qty: int=1):
     
     if type == 'small':
@@ -160,11 +169,10 @@ class VMS():
       _config = pool.TVMMedium()
     elif type == 'large':
       _config = pool.TVMLarge()
-
+      
     _vm = pool.TVM(
       type = type,
-      # TODO: Необходим генератор уникальных имен
-      name = f'{self.pool.vm_name_prefix}{(len(self.pool.items) + 1)}',
+      name = f'{self.pool.vm_name_prefix}{self.get_next_index():02}',
       os = os,
       state = 'NEW',
       config = _config
