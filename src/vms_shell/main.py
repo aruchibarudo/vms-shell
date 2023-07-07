@@ -123,8 +123,10 @@ class VmShell(Cmd):
       return [i for i in pool.TVMOs.list() if i.startswith(text)]
     elif len(_args) == 2:
       return [i for i in pool.TVMTypes.list() if i.startswith(text)]
-    elif len(_args) == 3:
+    elif text and len(_args) == 3:
       return [i for i in pool.TVMOs.list() if i.startswith(text)]
+    else:
+      return text
   
   
   def do_rm(self, input):
