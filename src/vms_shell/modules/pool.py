@@ -100,7 +100,7 @@ class PoolState(AutoEnum):
 
 class CoUser(BaseModel):
   login: str
-  role: Literal['ADMIN', 'USER'] = 'USER'
+  role: str = 'USER'
   display_name: str
   
 
@@ -117,4 +117,4 @@ class TVMPool(BaseModel):
   description: str = None
   name: str = None
   task_ids: list=None
-  users: CoUser | None
+  users: Union[List[CoUser], None] = None
