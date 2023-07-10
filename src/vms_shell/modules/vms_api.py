@@ -301,7 +301,7 @@ class VMS():
           if prompt:
             print(prompt, readline.get_line_buffer(), sep='', end='', flush=True)
         
-        if new_state in ('FAILURE', 'SUCCESS'):
+        if self.pool.state in ('FAILURE', 'SUCCESS'):
           return
         
       sleep(time_to_sleep)
