@@ -4,6 +4,28 @@ from pydantic import BaseModel
 from uuid import uuid4, UUID
 
 
+class AutoEnum(Enum):
+  def _generate_next_value_(name, start, count, last_values):
+    return name
+
+class PoolState(AutoEnum):
+  INIT = auto()
+  CREATE = auto()
+  CREATED = auto()
+  PLAN = auto()
+  PLANNED = auto()
+  PENDING = auto()
+  APPLY = auto()
+  RUNNING = auto()
+  FAILED = auto()
+  FAILURE = auto()
+  DESTROY = auto()
+  DESTROYED = auto()
+  DELETE = auto()
+  SUCCESS = auto()
+  STARTED = auto()
+  PROGRESS = auto()
+ 
 class VMSTaskState(BaseModel):
   name: str
   task_id: UUID
@@ -14,17 +36,11 @@ class VMSTaskState(BaseModel):
 class VMSTaskResult(BaseModel):
   pool_id: UUID
   pool_name: str
-  state: str
+  state: PoolState
   action: str=None
   state_note: str=None
   tasks: List[VMSTaskState]
-  
-  
-class AutoEnum(Enum):
-  def _generate_next_value_(name, start, count, last_values):
-    return name
-      
-      
+     
 class MyEnum(Enum):
 
   @classmethod
@@ -82,26 +98,7 @@ class TVM(BaseModel):
   notes: str = None
    
 
-class PoolState(AutoEnum):
-  INIT = auto()
-  CREATE = auto()
-  CREATED = auto()
-  PLAN = auto()
-  PLANNED = auto()
-  PENDING = auto()
-  APPLY = auto()
-  RUNNING = auto()
-  FAILED = auto()
-  FAILURE = auto()
-  DESTROY = auto()
-  DESTROYED = auto()
-  DELETE = auto()
-  SUCCESS = auto()
-  STARTED = auto()
-  PROGRESS = auto()
-  
-
-TaskFinished = tuple(PoolState.DESTROYED, PoolState.PLANNED, PoolState.FAILURE, PoolState.SUCCESS)
+TaskFinished = tuple([PoolState.DESTROYED, PoolState.PLANNED, PoolState.FAILURE, PoolState.SUCCESS])
 
 class CoUser(BaseModel):
   login: str

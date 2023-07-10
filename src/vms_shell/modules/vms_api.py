@@ -5,6 +5,7 @@ import requests
 from . import pool
 from time import sleep
 import sys
+import threading
 
 if sys.platform == 'win32':
   from pyreadline3 import Readline
@@ -253,6 +254,30 @@ class VMS():
 
   
   @http_exception
+  def get_pool_state(self, name: str, prompt: str=None, time_to_sleep: int=5):
+    
+    local = threading.local()
+    local.pool_name = name
+    
+    while True:
+      local.old_pool_state = self.pool.state
+      local.old_pool_state_note = self.pool.state_note
+      self.pool_select(local.pool_name)
+
+      if local.old_pool_state != self.pool.state or local.old_pool_state_note != self.pool.state_note:
+        print()
+        print(f'State changed (pool {self.pool.name}): {self.pool.state_note}: {local.old_pool_state.value} -> {self.pool.state.value}')
+        
+        if prompt:
+          print(prompt, readline.get_line_buffer(), sep='', end='', flush=True)
+        
+        if self.pool.state in pool.TaskFinished:
+          return
+        
+      sleep(time_to_sleep)
+
+
+  @http_exception
   def get_state(self, pool_id: UUID, task_id: UUID, prompt: str=None):
     time_to_sleep = 5
     
@@ -279,17 +304,17 @@ class VMS():
         for task in _res.tasks:
 
           if task.state == 'PROGRESS':
-            new_state = 'PROGRESS'
+            new_state = pool.PoolState.PROGRESS
             new_task_name = task.name
         
-        if self.pool.state != pool.PoolState(new_state) or self.pool.state_note != new_task_name:
+        if self.pool.state != new_state or self.pool.state_note != new_task_name:
           
           if new_state in pool.TaskFinished:
             new_task_name = _res.state_note
             
           print()
-          print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {new_state}')
-          self.pool.state = pool.PoolState(new_state)
+          print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {new_state.value}')
+          self.pool.state = new_state
           self.pool.state_note = new_task_name
           
           if prompt:

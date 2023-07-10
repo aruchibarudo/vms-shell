@@ -171,30 +171,27 @@ class VmShell(Cmd):
         
     elif _args[0] == 'plan':
       self.vms.pool_plan()
-      th = Thread(target=self.vms.get_state,
+      th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
                   name=f'{_args[0]} pool {self.vms.name}',
-                  kwargs={'pool_id': self.vms.pool_id,
-                          'task_id':self.vms.pool.task_id,
+                  kwargs={'name': self.vms.pool.name,
                           'prompt': self.prompt})
       th.start()
     elif _args[0] == 'apply':
       self.vms.pool_apply()
-      th = Thread(target=self.vms.get_state,
+      th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
                   name=f'{_args[0]} pool {self.vms.name}',
-                  kwargs={'pool_id': self.vms.pool_id,
-                          'task_id':self.vms.pool.task_id,
+                  kwargs={'name': self.vms.pool.name,
                           'prompt': self.prompt})
       th.start()
       self.namer.park_prefix(prefix=self.vms.pool.vm_name_prefix)
     elif _args[0] == 'destroy':
       self.vms.pool_destroy()
-      th = Thread(target=self.vms.get_state,
+      th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
                   name=f'{_args[0]} pool {self.vms.name}',
-                  kwargs={'pool_id': self.vms.pool_id,
-                          'task_id':self.vms.pool.task_id,
+                  kwargs={'name': self.vms.pool.name,
                           'prompt': self.prompt})
       th.start()
     elif _args[0] == 'delete':
