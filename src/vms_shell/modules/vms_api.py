@@ -273,37 +273,29 @@ class VMS():
       else:
         _res = pool.VMSTaskResult(**response.json())
         logging.debug(_res)
-        new_task_state = _res.state
+        new_state = _res.state
         new_task_name = self.pool.state_note
         
         for task in _res.tasks:
 
           if task.state == 'PROGRESS':
-            new_task_state = 'PROGRESS'
+            new_state = 'PROGRESS'
             new_task_name = task.name
         
-        if self.pool.state != pool.PoolState(new_task_state) or self.pool.state_note != new_task_name:
+        if self.pool.state != pool.PoolState(new_state) or self.pool.state_note != new_task_name:
           
-          if new_task_state == 'SUCCESS':
+          if new_state in pool.TaskFinished:
             new_task_name = _res.state_note
-            pool_state = 'SUCCESS'
-            
-            if _res.action == 'destroy':
-              pool_state = 'DESTROYED'
-            
-            if _res.action == 'plan':
-              pool_state = 'PLANNED'
             
           print()
-          print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {pool_state}')
-          self.pool.state = pool.PoolState(pool_state)
-          self.pool.task_state = pool.PoolState(new_task_state)
+          print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {new_state}')
+          self.pool.state = pool.PoolState(new_state)
           self.pool.state_note = new_task_name
           
           if prompt:
             print(prompt, readline.get_line_buffer(), sep='', end='', flush=True)
         
-        if self.pool.task_state in ('FAILURE', 'SUCCESS'):
+        if new_state in pool.TaskFinished:
           return
         
       sleep(time_to_sleep)

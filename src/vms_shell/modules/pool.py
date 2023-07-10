@@ -101,6 +101,8 @@ class PoolState(AutoEnum):
   PROGRESS = auto()
   
 
+TaskFinished = tuple(PoolState.DESTROYED, PoolState.PLANNED, PoolState.FAILURE, PoolState.SUCCESS)
+
 class CoUser(BaseModel):
   login: str
   role: str = 'USER'
