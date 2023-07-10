@@ -112,6 +112,7 @@ class TVMPool(BaseModel):
   vm_name_prefix: str = 'spb41tp9223-'
   task_id: UUID = None
   state: PoolState = None
+  task_state: PoolState = None
   state_note: str = None
   site: str = "SPB41"
   api_version: str = 'v1'
