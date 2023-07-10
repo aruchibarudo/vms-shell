@@ -8,12 +8,14 @@ class VMSTaskState(BaseModel):
   name: str
   task_id: UUID
   state: str
+  action: str=None
   detail: str=None
 
 class VMSTaskResult(BaseModel):
   pool_id: UUID
   pool_name: str
   state: str
+  action: str=None
   state_note: str=None
   tasks: List[VMSTaskState]
   

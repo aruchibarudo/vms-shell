@@ -253,7 +253,7 @@ class VMS():
 
   
   @http_exception
-  def get_state(self, pool_id: UUID, task_id: UUID, prompt: str=None, buffer: str=''):
+  def get_state(self, pool_id: UUID, task_id: UUID, prompt: str=None):
     time_to_sleep = 5
     
     while True:
@@ -286,6 +286,12 @@ class VMS():
           
           if new_state == 'SUCCESS':
             new_task_name = _res.state_note
+            
+            if _res.action == 'destroy':
+              new_state = 'DESTROYED'
+            
+            if _res.action == 'plan':
+              new_state = 'PLANNED'
             
           print()
           print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {new_state}')
