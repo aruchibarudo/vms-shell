@@ -17,7 +17,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.1.7'
+VERSION = '0.1.8'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -149,10 +149,15 @@ class VmShell(Cmd):
     
     if _args[0] == 'create':
       _name = self.namer.get_prefix()
-      _res = self.vms.pool_create(name=_name)
+      description = None
+      
+      if len(_args) == 2:
+        description=_args[1]
+        
+      _res = self.vms.pool_create(name=_name, description=description)
       
       if _res:
-        print(f'Pool created {_res}')
+        print(f'Pool created {_res} ({description})')
       else:
         print(f'Could not create pool')
         
@@ -170,6 +175,7 @@ class VmShell(Cmd):
         print('Pool must be specified ex. "pool select <pool_name>"')
         
     elif _args[0] == 'plan':
+      raise NotImplemented('planned in next version')
       self.vms.pool_plan()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
@@ -218,6 +224,7 @@ class VmShell(Cmd):
       _state = self.vms.pool.state.value if self.vms.pool.state else 'INIT'
       print(f'Pool id: {self.vms.pool_id}')
       print(f'Pool name: {self.vms.pool.name}')
+      print(f'Pool description: {self.vms.pool.description}')
       print(f'owner: {self.vms.pool.owner}')
       print(f'State: {_state}')
       print(f'{TITLE_NUMBER:>3}| {TITLE_NAME:14}| {TITLE_OS:18}| {TITLE_CPU:4}| {TITLE_MEMORY:5}| {TITLE_DISK:6}| {TITLE_NOTE}')

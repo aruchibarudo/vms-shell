@@ -42,6 +42,7 @@ class VMS():
     
     if self.name:
       self.pool_select(name=self.name)
+      print(f'Selected pool {self.name}')
 
   
   @http_exception
@@ -59,10 +60,11 @@ class VMS():
 
     
   @http_exception
-  def pool_create(self, name: str=None):
+  def pool_create(self, name: str=None, description: str=None):
     params = {
       'owner': self.username,
-      'name': name
+      'name': name,
+      'description': description
     }
     
     pool_id = uuid4()
