@@ -194,7 +194,7 @@ class VmShell(Cmd):
       self.vms.pool_plan()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
-                  name=f'{_args[0]} pool {self.vms.name}',
+                  name=f'{_args[0]} pool {self.vms.pool.name}',
                   kwargs={'name': self.vms.pool.name,
                           'prompt': self.prompt})
       th.start()
@@ -208,11 +208,11 @@ class VmShell(Cmd):
       self.vms.pool_apply()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
-                  name=f'{_args[0]} pool {self.vms.name}',
+                  name=f'{_args[0]} pool {self.vms.pool.name}',
                   kwargs={'name': self.vms.pool.name,
                           'prompt': self.prompt})
       th.start()
-      self.namer.park_prefix(prefix=self.vms.pool.vm_name_prefix)
+      self.namer.park_prefix(prefix=self.vms.pool.name)
     elif _args[0] == 'destroy':
 
       if self.is_locked():
@@ -223,7 +223,7 @@ class VmShell(Cmd):
       self.vms.pool_destroy()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
-                  name=f'{_args[0]} pool {self.vms.name}',
+                  name=f'{_args[0]} pool {self.vms.pool.name}',
                   kwargs={'name': self.vms.pool.name,
                           'prompt': self.prompt})
       th.start()
@@ -255,8 +255,8 @@ class VmShell(Cmd):
     if input == 'yaml':
       print(yaml.dump(items))
     else:
-      _state = self.vms.pool.state.value if self.vms.pool.state else 'INIT'
-      print(f'Pool id: {self.vms.pool_id}')
+      _state = self.vms.pool.state.value if self.vms.pool.state else None
+      print(f'Pool id: {str(self.vms.pool.id)}')
       print(f'Pool name: {self.vms.pool.name}')
       print(f'Pool description: {self.vms.pool.description}')
       print(f'owner: {self.vms.pool.owner}')

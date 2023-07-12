@@ -42,7 +42,7 @@ class VMS():
     
     if self.name:
       self.pool_select(name=self.name)
-      print(f'Selected pool {self.name}')
+      print(f'Selected pool {self.pool.name}')
 
   
   @http_exception
@@ -60,7 +60,7 @@ class VMS():
 
     
   @http_exception
-  def pool_create(self, name: str=None, description: str=None):
+  def pool_create(self, name: str=None, description: str=None) -> UUID:
     params = {
       'owner': self.username,
       'name': name,
@@ -70,18 +70,12 @@ class VMS():
     pool_id = uuid4()
     self.logger.debug(f'Create pool {pool_id}')
     self.pool.state = pool.PoolState.CREATE
-    
-    if name:
-      self.pool.vm_name_prefix = name
-    
     response = self.http.post(f'{self.vms_api}/pool', params=params)
     data = response.json().get('data')
-    pool_id = data.get('id')
-    self.pool_id = pool_id
     self.pool = pool.TVMPool(**data)
     
-    logging.debug(f'Pool {pool_id} created: {data}')
-    return self.pool_id
+    logging.debug(f'Pool {self.pool.id} created: {data}')
+    return self.pool.id
     
   
   @http_exception
@@ -109,7 +103,7 @@ class VMS():
     return _pool
 
 
-  @http_exception    
+  @http_exception
   def pool_select(self, name: str):
     _pool_id = self.pools.get(name)
 
@@ -120,9 +114,7 @@ class VMS():
       
       if _res.get('status') == 'OK':
         self.pool = pool.TVMPool(**_res.get('data'))
-        self.pool_id = self.pool.id
-        self.name = self.pool.name
-        self.logger.debug(f'Selected pool {self.name}/{self.pool_id}')
+        self.logger.debug(f'Selected pool {self.pool.name}/{self.pool.id}')
       else:
         self.logger.debug(f'Pool {name} not found')
         
@@ -135,35 +127,36 @@ class VMS():
     
   @http_exception    
   def pool_delete(self):
-    self.logger.debug(f'Delete pool {self.pool_id}')
-    response = self.http.delete(f'{self.vms_api}/pool/{self.pool_id}', timeout=self.http_timeout)
+    _pool_id = str(self.pool.id)
+    self.logger.debug(f'Delete pool {_pool_id}')
+    response = self.http.delete(f'{self.vms_api}/pool/{_pool_id}', timeout=self.http_timeout)
     _res = response.json()
     
     if _res.get('status') == 'OK':
-      self.pool = pool.TVMPool(owner=self.username)
-      self.logger.debug(f'Pool {self.pool_id} deleted')
-      self.pool_id = None
+      self.pool = None
+      self.logger.debug(f'Pool {_pool_id} deleted')
     else:
-      self.logger.debug(f'Can not delete pool {self.pool_id}')
+      self.logger.debug(f'Can not delete pool {_pool_id}')
       
     return _res.get('status') == 'OK'
   
   
   @http_exception
   def pool_get(self):
-    self.logger.debug(f'Show pool {self.pool_id}')
-    response = self.http.get(f'{self.vms_api}/pool/{self.pool_id}', timeout=self.http_timeout)
+    _ppol_id = str(self.pool.id)
+    self.logger.debug(f'Show pool {_ppol_id}')
+    response = self.http.get(f'{self.vms_api}/pool/{_ppol_id}', timeout=self.http_timeout)
     _res = response.json()
     
     if(_res.get('status') == 'OK'):
       self.pool = pool.TVMPool(**_res.get('data'))
-      self.logger.debug(f'Pool {self.pool_id} OK: {_res}')
+      self.logger.debug(f'Pool {self.pool.id} OK: {_res}')
     else:
-      self.logger.debug(f'Pool {self.pool_id} ERROR: {_res}')
+      self.logger.debug(f'Pool {self.pool.id} ERROR: {_res}')
     
 
   def pool_show(self):
-    self.logger.debug(f'Show pool {self.pool_id}')
+    self.logger.debug(f'Show pool {str(self.pool.id)}')
     
     if isinstance(self.pool.items, Iterable):
       
@@ -185,7 +178,7 @@ class VMS():
     _idxs = []
     
     for _vm in self.pool.items:
-      _idxs.append(int(_vm.name.replace(self.pool.vm_name_prefix, '')))
+      _idxs.append(int(_vm.name.replace(self.pool.name, '')))
     
     return max(_idxs) + 1 if _idxs else 1
 
@@ -201,7 +194,7 @@ class VMS():
       
     _vm = pool.TVM(
       type=type,
-      name=f'{self.pool.vm_name_prefix}{self.get_next_index():02}',
+      name=f'{self.pool.name}{self.get_next_index():02}',
       os=os,
       state='NEW',
       config=_config,
@@ -226,7 +219,7 @@ class VMS():
 
   @http_exception
   def pool_apply(self):
-    self.pool.state = pool.PoolState.PROGRESS
+    self.pool.state = pool.PoolState.PENDING
     response = self.http.post(f'{self.vms_api}/pool/apply', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -241,7 +234,7 @@ class VMS():
   
   @http_exception
   def pool_plan(self):
-    self.pool.state = pool.PoolState.PROGRESS
+    self.pool.state = pool.PoolState.PENDING
     response = self.http.post(f'{self.vms_api}/pool/plan', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -255,7 +248,7 @@ class VMS():
       
   @http_exception
   def pool_destroy(self):
-    self.pool.state = pool.PoolState.PROGRESS
+    self.pool.state = pool.PoolState.PENDING
     response = self.http.post(f'{self.vms_api}/pool/destroy', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -310,7 +303,7 @@ class VMS():
           return
         
       if local.retry >= local.max_retry:
-        self.logger.error(f'Fetch status for pool {local.pool.name}/{local.pool.id} timeout reached {time_to_sleep}s')
+        self.logger.error(f'Fetch status for pool {local.pool.name}/{local.pool.id} timeout reached {time_to_live}s')
         
         if self.pool.id == local.pool.id:
           self.pool_select(local.pool.name)
@@ -347,7 +340,7 @@ class VMS():
         _res = pool.VMSTaskResult(**response.json())
         logging.debug(_res)
         new_state = _res.state
-        new_task_name = self.pool.state_note
+        new_task_name = _res.state_note
         
         for task in _res.tasks:
 
@@ -361,7 +354,7 @@ class VMS():
             new_task_name = _res.state_note
             
           print()
-          print(f'State changed (pool {_res.pool_name}): {new_task_name}: {self.pool.state.value} -> {new_state.value}')
+          print(f'State changed (pool {_res.pool_name}): {self.pool.state.value} -> {new_state.value}')
           self.pool.state = new_state
           self.pool.state_note = new_task_name
           

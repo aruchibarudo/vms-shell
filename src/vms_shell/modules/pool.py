@@ -98,7 +98,7 @@ class TVM(BaseModel):
   notes: str = None
    
 
-TaskFinished = tuple([PoolState.DESTROYED, PoolState.PLANNED, PoolState.FAILURE, PoolState.SUCCESS])
+TaskFinished = tuple([PoolState.DESTROYED, PoolState.PLANNED, PoolState.FAILURE, PoolState.SUCCESS, PoolState.CREATED, PoolState.PLANNED])
 
 class CoUser(BaseModel):
   login: str
@@ -108,7 +108,7 @@ class CoUser(BaseModel):
 
 class TVMPool(BaseModel):
   id: UUID = None
-  vm_name_prefix: str = 'spb41tp9223-'
+  vm_name_prefix: str = None
   task_id: UUID = None
   state: PoolState = None
   task_state: PoolState = None
