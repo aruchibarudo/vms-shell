@@ -93,19 +93,44 @@ class VMS():
     
 
   @http_exception    
-  def pool_select(self, name: str):
-    self.pool_id = self.pools.get(name)
-    self.logger.debug(f'Select pool {name}/{self.pool_id}')
+  def get_pool(self, name: str):
+    _pool_id = self.pools.get(name)
+    self.logger.debug(f'Get pool {name}/{_pool_id}')
     response = self.http.get(f'{self.vms_api}/pool/{name}', timeout=self.http_timeout)
     _res = response.json()
     
     if _res.get('status') == 'OK':
-      self.pool = pool.TVMPool(**_res.get('data'))
-      self.logger.debug(f'Selected pool {name}')
+      _pool = pool.TVMPool(**_res.get('data'))
+      self.logger.debug(f'Pool {name} exists')
+      self.logger.debug(_pool)
     else:
       self.logger.debug(f'Pool {name} not found')
       
-    return _res.get('status') == 'OK'
+    return _pool
+
+
+  @http_exception    
+  def pool_select(self, name: str):
+    _pool_id = self.pools.get(name)
+
+    if _pool_id:
+      self.logger.debug(f'Select pool {name}/{_pool_id}')
+      response = self.http.get(f'{self.vms_api}/pool/{name}', timeout=self.http_timeout)
+      _res = response.json()
+      
+      if _res.get('status') == 'OK':
+        self.pool = pool.TVMPool(**_res.get('data'))
+        self.pool_id = self.pool.id
+        self.name = self.pool.name
+        self.logger.debug(f'Selected pool {self.name}/{self.pool_id}')
+      else:
+        self.logger.debug(f'Pool {name} not found')
+        
+      return _res.get('status') == 'OK'
+    else:
+      self.logger.debug(f'Pool {name} not found')
+      return False
+      
     
     
   @http_exception    
@@ -201,7 +226,7 @@ class VMS():
 
   @http_exception
   def pool_apply(self):
-    self.pool.state = pool.PoolState.APPLY
+    self.pool.state = pool.PoolState.PROGRESS
     response = self.http.post(f'{self.vms_api}/pool/apply', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -216,7 +241,7 @@ class VMS():
   
   @http_exception
   def pool_plan(self):
-    self.pool.state = pool.PoolState.PLAN
+    self.pool.state = pool.PoolState.PROGRESS
     response = self.http.post(f'{self.vms_api}/pool/plan', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -230,7 +255,7 @@ class VMS():
       
   @http_exception
   def pool_destroy(self):
-    self.pool.state = pool.PoolState.DESTROY
+    self.pool.state = pool.PoolState.PROGRESS
     response = self.http.post(f'{self.vms_api}/pool/destroy', data=self.pool.json(), timeout=self.http_timeout)
     
     if(response.status_code >= 400):
@@ -256,27 +281,48 @@ class VMS():
 
   
   @http_exception
-  def get_pool_state(self, name: str, prompt: str=None, time_to_sleep: int=5):
+  def get_pool_state(self, name: str, prompt: str=None, time_to_sleep: int=5, time_to_live: int=600):
     
     local = threading.local()
-    local.pool_name = name
+    #local.pool_name = name
+    local.retry = 0
+    local.max_retry = int(time_to_live / time_to_sleep)
+    local.pool = self.get_pool(name)
+    local.old_pool_state = self.pool.state
+    local.old_pool_state_note = self.pool.state_note    
     
     while True:
-      local.old_pool_state = self.pool.state
-      local.old_pool_state_note = self.pool.state_note
-      self.pool_select(local.pool_name)
-
-      if local.old_pool_state != self.pool.state or local.old_pool_state_note != self.pool.state_note:
+      local.retry += 1
+      self.logger.debug(f'{local.pool.name} Retry {local.retry} of {local.max_retry}')
+      
+      if local.old_pool_state != local.pool.state or local.old_pool_state_note != local.pool.state_note:
         print()
-        print(f'State changed (pool {self.pool.name}): {self.pool.state_note}: {local.old_pool_state.value} -> {self.pool.state.value}')
-        
+        print(f'State changed (pool {local.pool.name}): {local.pool.state_note}: {local.old_pool_state.value} -> {local.pool.state.value}')
+
+        if self.pool.id == local.pool.id:
+          self.pool_select(local.pool.name)
+                    
         if prompt:
           print(prompt, readline.get_line_buffer(), sep='', end='', flush=True)
         
-        if self.pool.state in pool.TaskFinished:
+        if local.pool.state in pool.TaskFinished:
+          self.logger.debug(f'{local.pool.name} all tasks are finished')
           return
         
+      if local.retry >= local.max_retry:
+        self.logger.error(f'Fetch status for pool {local.pool.name}/{local.pool.id} timeout reached {time_to_sleep}s')
+        
+        if self.pool.id == local.pool.id:
+          self.pool_select(local.pool.name)
+        
+        return
+        
+      self.logger.debug(f'Sleep for {time_to_sleep}s')
       sleep(time_to_sleep)
+      local.old_pool_state = local.pool.state
+      local.old_pool_state_note = local.pool.state_note
+      local.pool = self.get_pool(name)
+
 
 
   @http_exception

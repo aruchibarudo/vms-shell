@@ -17,7 +17,7 @@ else:
   from .modules.namer import *
 
 
-VERSION = '0.1.8'
+VERSION = '0.1.9'
 VMS_API_HOST = 'spb99tpagent01'
 VMS_API_PORT = 80
 VMS_API_BASE_PATH = 'vms/api/v1'
@@ -88,7 +88,14 @@ class VmShell(Cmd):
     print(f'v{VERSION}')
   
 
+  def is_locked(self):
+    return self.vms.pool.state not in pool.TaskFinished
+
   def do_add(self, input):
+    
+    if self.is_locked():
+      self.err.append(f'Can not modify pool {self.vms.pool.name} while in state {self.vms.pool.state.value}')
+    
     _args = parse(input)
     _qty = 1
     _description = None
@@ -127,6 +134,12 @@ class VmShell(Cmd):
   
   
   def do_rm(self, input):
+
+    if self.is_locked():
+      self.err.append(f'Can not modify pool {self.vms.pool.name} while in state {self.vms.pool.state.value}')
+      self.show_error()
+      return False
+
     self.vms.vm_rm(input)
 
 
@@ -142,7 +155,7 @@ class VmShell(Cmd):
     _args = parse(input)
     
     if not (_args and _args[0] in self.pool_cmds):
-      self.err.append(f'pool has only {self.pool_cmds} command')
+      self.err.append(f'available pool commands: {self.pool_cmds}')
       
       if self.show_error():
         return None
@@ -169,13 +182,15 @@ class VmShell(Cmd):
         if res:
           print(f'Selected pool {_args[1]}')
         else:
-          print(f'Could not select pool {_args[1]}')
+          print(f'Pool {_args[1]} not found')
           
       else:
         print('Pool must be specified ex. "pool select <pool_name>"')
         
     elif _args[0] == 'plan':
-      raise NotImplemented('planned in next version')
+      print('Not implementet yet')
+      return False
+      raise NotImplementedError('wait for future')
       self.vms.pool_plan()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
@@ -184,6 +199,12 @@ class VmShell(Cmd):
                           'prompt': self.prompt})
       th.start()
     elif _args[0] == 'apply':
+      
+      if self.is_locked():
+        self.err.append(f'Can not modify pool {self.vms.pool.name} while in state {self.vms.pool.state.value}')
+        self.show_error()
+        return False
+
       self.vms.pool_apply()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
@@ -193,6 +214,12 @@ class VmShell(Cmd):
       th.start()
       self.namer.park_prefix(prefix=self.vms.pool.vm_name_prefix)
     elif _args[0] == 'destroy':
+
+      if self.is_locked():
+        self.err.append(f'Can not modify pool {self.vms.pool.name} while in state {self.vms.pool.state.value}')
+        self.show_error()
+        return False
+
       self.vms.pool_destroy()
       th = Thread(target=self.vms.get_pool_state,
                   daemon=True,
@@ -201,8 +228,15 @@ class VmShell(Cmd):
                           'prompt': self.prompt})
       th.start()
     elif _args[0] == 'delete':
+
+      if self.is_locked():
+        self.err.append(f'Can not modify pool {self.vms.pool.name} while in state {self.vms.pool.state.value}')
+        self.show_error()
+        return False
+
+      _pool_name = self.vms.pool.name
       _res = self.vms.pool_delete()
-      self.namer.free_prefix(self.vms.pool.vm_name_prefix)
+      self.namer.free_prefix(_pool_name)
     elif _args[0] == 'list':
       _res = self.vms.pool_list()
       
